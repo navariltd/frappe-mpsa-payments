@@ -2,6 +2,14 @@
 *.pyc
 *.egg-info
 *.swp
+*.rest
+
+*.pem
+*.cer
+
+logfile.txt
 tags
-node_modules
-__pycache__
+
+/node_modules
+/.vscode
+/__pycache__/
