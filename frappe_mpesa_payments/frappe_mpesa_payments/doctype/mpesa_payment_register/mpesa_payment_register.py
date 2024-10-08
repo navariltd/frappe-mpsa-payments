@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe_mpesa_payments.frappe_mpesa_payments.api.payment_entry import create_payment_entry
 
-class MpesaC2BPaymentRegister(Document):
+class MpesaPaymentRegister(Document):
     def before_insert(self):
         self.set_missing_values()
 

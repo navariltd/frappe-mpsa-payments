@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestMpesaC2BPaymentRegister(FrappeTestCase):
+class TestMpesaPaymentRegister(FrappeTestCase):
 	pass
