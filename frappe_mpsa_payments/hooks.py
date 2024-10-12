@@ -1,7 +1,7 @@
 app_name = "frappe_mpsa_payments"
-app_title = "Frappe Mpsa Payments"
+app_title = "Frappe Mpesa Payments"
 app_publisher = "Navari Limited"
-app_description = "Frappe Mpsa Payments"
+app_description = "Frappe Mpesa Payments"
 app_email = "solutions@navari.co.ke"
 app_license = "agpl-3.0"
 
@@ -15,7 +15,7 @@ app_license = "agpl-3.0"
 # 	{
 # 		"name": "frappe_mpsa_payments",
 # 		"logo": "/assets/frappe_mpsa_payments/logo.png",
-# 		"title": "Frappe Mpsa Payments",
+# 		"title": "Frappe Mpesa Payments",
 # 		"route": "/frappe_mpsa_payments",
 # 		"has_permission": "frappe_mpsa_payments.api.permission.has_app_permission"
 # 	}
