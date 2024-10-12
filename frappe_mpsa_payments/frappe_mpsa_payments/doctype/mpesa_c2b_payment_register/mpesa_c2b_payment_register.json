@@ -121,7 +121,6 @@
    "in_standard_filter": 1,
    "label": "MSISDN",
    "no_copy": 1,
-   "options": "Phone",
    "read_only": 1
   },
   {
