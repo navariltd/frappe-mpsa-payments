@@ -32,11 +32,11 @@ class MpesaC2BPaymentRegisterURL(Document):
         site_url = get_request_site_address(True)
         validation_url = (
             #site_url + "/api/method/payments.payment_gateways.doctype.mpesa_c2b_payment_register_url.mpesa_api.validation"
-            site_url + "/api/method/frappe_mpsa_payments.api.m_pesa_api.validation"
+            site_url + "/api/method/frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.validation"
         )
         confirmation_url = (
             # site_url + "/api/method/payments.payment_gateways.doctype.mpesa_c2b_payment_register_url.mpesa_api.confirmation"
-            site_url + "/api/method/frappe_mpsa_payments.api.m_pesa_api.confirmation"
+            site_url + "/api/method/frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.confirmation"
         )
         register_url = base_url + "/mpesa/c2b/v2/registerurl"
 
