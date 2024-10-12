@@ -21,7 +21,7 @@ class MpesaC2BPaymentRegister(Document):
             self.full_name += " " + self.lastname
 
         register_url_list = frappe.get_all(
-            "Mpesa C2B Register URL",
+            "Mpesa C2B Payment Register URL",
             filters={
                 "business_shortcode": self.businessshortcode,
                 "register_status": "Success",
