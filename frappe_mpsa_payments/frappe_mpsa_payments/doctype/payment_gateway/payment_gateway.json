@@ -31,7 +31,7 @@
   "links": [],
   "modified": "2022-07-24 21:17:03.864719",
   "modified_by": "Administrator",
-  "module": "Frappe Mpesa Payments",
+  "module": "Frappe Mpsa Payments",
   "name": "Payment Gateway",
   "naming_rule": "By fieldname",
   "owner": "Administrator",

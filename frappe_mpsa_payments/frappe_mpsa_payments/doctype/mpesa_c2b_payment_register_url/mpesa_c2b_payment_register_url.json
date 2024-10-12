@@ -76,7 +76,7 @@
  "links": [],
  "modified": "2024-07-04 09:12:02.177065",
  "modified_by": "Administrator",
- "module": "Frappe Mpesa Payments",
+ "module": "Frappe Mpsa Payments",
  "name": "Mpesa C2B Payment Register URL",
  "naming_rule": "By fieldname",
  "owner": "Administrator",

@@ -237,7 +237,7 @@
  "links": [],
  "modified": "2024-07-04 09:11:40.484211",
  "modified_by": "Administrator",
- "module": "Frappe Mpesa Payments",
+ "module": "Frappe Mpsa Payments",
  "name": "Mpesa C2B Payment Register",
  "naming_rule": "Expression (old style)",
  "owner": "Administrator",

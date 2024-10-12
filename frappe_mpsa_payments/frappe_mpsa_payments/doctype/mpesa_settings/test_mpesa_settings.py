@@ -11,11 +11,11 @@ from erpnext.accounts.doctype.pos_invoice.test_pos_invoice import create_pos_inv
 from erpnext.stock.doctype.item.test_item import make_item
 from erpnext.accounts.doctype.pos_profile.test_pos_profile import make_pos_profile
 
-from payments.payment_gateways.doctype.mpesa_settings.mpesa_settings import (
+from frappe_mpsa_payment.doctype.mpesa_settings.mpesa_settings import (
 	process_balance_info,
 	verify_transaction,
 )
-from payments.payment_gateways.doctype.mpesa_settings.mpesa_settings import create_mode_of_payment
+from frappe_mpsa_payment.doctype.mpesa_settings.mpesa_settings import create_mode_of_payment
 
 
 class TestMpesaSettings(unittest.TestCase):
