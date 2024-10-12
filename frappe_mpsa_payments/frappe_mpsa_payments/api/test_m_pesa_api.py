@@ -3,7 +3,7 @@ from unittest.mock import patch, Mock
 import json
 from frappe.tests.utils import FrappeTestCase
 
-from frappe_mpesa_payments.api.m_pesa_api import (
+from frappe_mpsa_payments.api.m_pesa_api import (
     get_token,
     confirmation,
     validation,

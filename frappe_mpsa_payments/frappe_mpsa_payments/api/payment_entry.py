@@ -9,7 +9,7 @@ from erpnext.accounts.doctype.journal_entry.journal_entry import (
 )
 from erpnext.setup.utils import get_exchange_rate
 from erpnext.accounts.doctype.bank_account.bank_account import get_party_bank_account
-from frappe_mpesa_payments.frappe_mpesa_payments.api.m_pesa_api import submit_mpesa_payment
+from frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api import submit_mpesa_payment
 from erpnext.accounts.utils import get_outstanding_invoices as _get_outstanding_invoices
 import ast
 

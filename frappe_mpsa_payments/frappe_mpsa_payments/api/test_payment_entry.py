@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe_mpesa_payments.frappe_mpesa_payments.api.payment_entry import (
+from frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry import (
     get_outstanding_invoices,
     get_unallocated_payments,
     process_pos_payment,
