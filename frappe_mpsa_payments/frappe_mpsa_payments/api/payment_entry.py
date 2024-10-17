@@ -185,7 +185,7 @@ def get_outstanding_invoices(company, currency, customer=None, pos_profile_name=
         list: List of outstanding invoices.
     """
     if customer:
-        precision = frappe.get_precision("POS Invoice", "outstanding_amount") or 2
+        precision = frappe.get_precision("Sales Invoice", "outstanding_amount") or 2
         outstanding_invoices = _get_outstanding_invoices(
             party_type="Customer",
             party=customer,
@@ -196,7 +196,7 @@ def get_outstanding_invoices(company, currency, customer=None, pos_profile_name=
         for invoice in outstanding_invoices:
             if invoice.get("currency") == currency:
                 if pos_profile_name and frappe.get_cached_value(
-                    "POS Invoice", invoice.get("voucher_no"), "pos_profile"
+                    "Sales Invoice", invoice.get("voucher_no"), "pos_profile"
                 ) != pos_profile_name:
                     continue
                 outstanding_amount = invoice.outstanding_amount
@@ -228,7 +228,7 @@ def get_outstanding_invoices(company, currency, customer=None, pos_profile_name=
         if pos_profile_name:
             filters.update({"pos_profile": pos_profile_name})
         invoices = frappe.get_all(
-            "POS Invoice",
+            "Sales Invoice",
             filters=filters,
             fields=[
                 "name",
@@ -409,7 +409,7 @@ def process_mpesa_c2b_reconciliation():
     company = invoice.get("company")
 
     # TODO: after testing, withdraw this static method of payment
-    mode_of_payment = "Mpesa-Test"
+    mode_of_payment = "Mpesa"
 
     payment_entry = submit_mpesa_payment(mpesa_transaction, customer)
     payment_entries = [payment_entry.get("name")]

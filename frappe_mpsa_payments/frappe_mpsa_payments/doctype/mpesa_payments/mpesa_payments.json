@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-10-16 10:33:50.017925",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "currency",
+  "column_break_sbgx",
+  "customer",
+  "filters_section",
+  "from_invoice_date",
+  "from_mpesa_payment_date",
+  "column_break_pfoh",
+  "to_invoice_date",
+  "to_mpesa_payment_date",
+  "sales_invoices_section",
+  "invoices",
+  "section_break_lqip",
+  "mpesa_payments"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_sbgx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.company",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "company.default_currency",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval: doc.customer",
+   "fieldname": "filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "from_invoice_date",
+   "fieldtype": "Date",
+   "label": "From Invoice Date"
+  },
+  {
+   "fieldname": "from_mpesa_payment_date",
+   "fieldtype": "Date",
+   "label": "From Mpesa Payment Date"
+  },
+  {
+   "fieldname": "column_break_pfoh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_invoice_date",
+   "fieldtype": "Date",
+   "label": "To Invoice Date"
+  },
+  {
+   "fieldname": "to_mpesa_payment_date",
+   "fieldtype": "Date",
+   "label": "To Mpesa Payment Date"
+  },
+  {
+   "depends_on": "eval: doc.customer",
+   "fieldname": "sales_invoices_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "invoices",
+   "fieldtype": "Table",
+   "label": "Invoices",
+   "options": "Mpesa Payments Invoices"
+  },
+  {
+   "depends_on": "eval: doc.customer",
+   "fieldname": "section_break_lqip",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "mpesa_payments",
+   "fieldtype": "Table",
+   "label": "Mpesa Payments",
+   "options": "Mpesa Draft Payments"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_virtual": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-10-17 07:37:53.368911",
+ "modified_by": "Administrator",
+ "module": "Frappe Mpsa Payments",
+ "name": "Mpesa Payments",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

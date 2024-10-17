@@ -63,9 +63,14 @@ def get_mpesa_mode_of_payment(company):
     return modes_of_payment
 
 @frappe.whitelist(allow_guest=True)
-def get_mpesa_draft_c2b_payments(search_term):
+def get_mpesa_draft_c2b_payments(
+    company,
+    full_name=None,
+    mode_of_payment=None,
+):
     fields = [
         "name",
+        "transid",
         "company",
         "msisdn",
         "full_name",
@@ -74,30 +79,19 @@ def get_mpesa_draft_c2b_payments(search_term):
         "transamount",
     ]
 
-    filters = {"docstatus": 0}
+    filters = {"company": company, "docstatus": 0}
     order_by="posting_date desc, posting_time desc"
 
-    if search_term:
-        payments_by_msisdn = frappe.get_all(
-            "Mpesa C2B Payment Register",
-            filters={"msisdn": ["like", f"%{search_term}%"], "docstatus": 0},
-            fields=fields,
-            order_by=order_by
-        )
-        payments_by_full_name = frappe.get_all(
-            "Mpesa C2B Payment Register",
-            filters={"full_name": ["like", f"%{search_term}%"], "docstatus": 0},
-            fields=fields,
-            order_by=order_by
-        )
+    if mode_of_payment:
+        filters["mode_of_payment"] = mode_of_payment
 
-        # Merge results from both queries
-        payments = payments_by_full_name + payments_by_msisdn
-    else:
-        # If search_term or status is not provided, return all payments with the given status
-        payments = frappe.get_all(
-            "Mpesa C2B Payment Register", filters=filters, fields=fields,order_by=order_by
-        )
+    if full_name:
+        filters["full_name"] = full_name
+
+    payments = frappe.get_all(
+        "Mpesa C2B Payment Register", 
+        filters=filters, fields=fields,order_by=order_by
+    )
     
     return payments
     
