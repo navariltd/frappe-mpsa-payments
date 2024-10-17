@@ -1,83 +1,111 @@
 // Copyright (c) 2024, Navari Limited and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Mpesa Payments', {
-    refresh: function(frm) {
-        // Hide the default save button
-        frm.disable_save();
+frappe.ui.form.on("Mpesa Payments", {
+  onload(frm) {
+    const default_company = frappe.defaults.get_user_default("Company");
+    frm.set_value("company", default_company);
+  },
 
-        frm.add_custom_button(__('Fetch Entries'), function() {
-            frappe.call({
-                method: 'frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry.get_outstanding_invoices',
-                args: {
-                    company: frm.doc.company,
-                    currency: frm.doc.currency,
-                    customer: "",
-                },
-                callback: function(response) {
-                    let draft_invoices = response.message;
-                    if (draft_invoices && draft_invoices.length > 0) {
+  refresh(frm) {
+    frm.disable_save();
 
-                        frm.clear_table('invoices');
+    frm.set_df_property("invoices", "cannot_add_rows", true);
+    frm.set_df_property("mpesa_payments", "cannot_add_rows", true);
 
-                        draft_invoices.forEach(function(invoice) {
-                            let row = frm.add_child('invoices');
-                            row.invoice = invoice.name;
-                            row.customer = invoice.customer;
-                            row.date = invoice.posting_date;
-                            row.total = invoice.grand_total;
-                            row.outstanding_amount = invoice.outstanding_amount;
-                        });
+    let fetch_btn = frm.add_custom_button(__("Fetch Entries"), () => {
+      frm.trigger("fetch_entries");
+    });
 
-                        frm.refresh_field('invoices');
+  },
 
-                    } else {
-                        frappe.msgprint({
-                            title: __('No Outstanding Invoices'),
-                            message: __('No outstanding invoices were found for the selected customer.'),
-                            indicator: 'orange'
-                        });
-                    }
-                }
-            });
+  fetch_entries(frm) {
+    frm.clear_table("invoices");
+    frm.clear_table("mpesa_payments");
 
-            frappe.call({
-                method: 'frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.get_mpesa_draft_c2b_payments',
-                args: {
-                    company: frm.doc.company,
-                    full_name: frm.doc.full_name ? frm.doc.full_name : "",
-                },
-                callback: function(response) {
-                    let draft_payments = response.message;
+    // Fetch outstanding invoices
+    frappe.call({
+      method:
+        "frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry.get_outstanding_invoices",
+      args: {
+        company: frm.doc.company,
+        currency: frm.doc.currency,
+        customer: "",
+      },
+      callback: function (response) {
+        let draft_invoices = response.message;
+        if (draft_invoices && draft_invoices.length > 0) {
+          frm.clear_table("invoices");
 
-                    if (draft_payments && draft_payments.length > 0) {
+          draft_invoices.forEach(function (invoice) {
+            let row = frm.add_child("invoices");
+            row.invoice = invoice.name;
+            row.customer = invoice.customer;
+            row.date = invoice.posting_date;
+            row.total = invoice.grand_total;
+            row.outstanding_amount = invoice.outstanding_amount;
+          });
 
-                        frm.clear_table('mpesa_payments');
+          frm.refresh_field("invoices");
+        } else {
+          frappe.msgprint({
+            title: __("No Outstanding Invoices"),
+            message: __(
+              "No outstanding invoices were found for the selected customer."
+            ),
+            indicator: "orange",
+          });
+        }
 
-                        draft_payments.forEach(function(payment) {
-                            let row = frm.add_child('mpesa_payments');
-                            row.payment_id = payment.name;
-                            row.full_name = payment.full_name;
-                            row.date = payment.posting_date;
-                            row.amount = payment.transamount;
-                        });
+        check_for_process_payments_button(frm);
+      },
+    });
 
-                        frm.refresh_field('mpesa_payments');
+    // Fetch draft payments
+    frappe.call({
+      method:
+        "frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.get_mpesa_draft_c2b_payments",
+      args: {
+        company: frm.doc.company,
+        full_name: frm.doc.full_name || "",
+      },
+      callback: function (response) {
+        let draft_payments = response.message;
 
-                    } else {
-                        frappe.msgprint({
-                            title: __('No Outstanding Payments'),
-                            message: __('No outstanding payments were found for the selected customer.'),
-                            indicator: 'orange'
-                        });
-                    }
-                }
-            });
-        });
+        if (draft_payments && draft_payments.length > 0) {
+          frm.clear_table("mpesa_payments");
 
-        frm.get_field("invoices").grid.cannot_add_rows = true;
-        refresh_field("invoices");
-        frm.get_field("mpesa_payments").grid.cannot_add_rows = true;
-        refresh_field("mpesa_payments");
-    },
+          draft_payments.forEach(function (payment) {
+            let row = frm.add_child("mpesa_payments");
+            row.payment_id = payment.name;
+            row.full_name = payment.full_name;
+            row.date = payment.posting_date;
+            row.amount = payment.transamount;
+          });
+
+          frm.refresh_field("mpesa_payments");
+        } else {
+          frappe.msgprint({
+            title: __("No Outstanding Payments"),
+            message: __(
+              "No outstanding payments were found for the selected customer."
+            ),
+            indicator: "orange",
+          });
+        }
+
+        check_for_process_payments_button(frm);
+      },
+    });
+  },
 });
+
+function check_for_process_payments_button(frm) {
+  if (frm.doc.invoices.length > 0 && frm.doc.mpesa_payments.length > 0) {
+    let process_btn = frm.add_custom_button(__("Process Payments"), () => {
+      frm.trigger("process_payments");
+    });
+
+    process_btn.addClass("btn-primary");
+  }
+}
