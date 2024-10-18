@@ -30,6 +30,7 @@ frappe.ui.form.on("Mpesa Payments", {
       args: {
         company: frm.doc.company,
         currency: frm.doc.currency,
+        // TODO: Figure out why I can't get_party_account for specific customer 
         customer: "",
       },
       callback: function (response) {
@@ -98,6 +99,26 @@ frappe.ui.form.on("Mpesa Payments", {
       },
     });
   },
+
+  process_payments(frm) {
+    let mpesa_payments = frm.doc.mpesa_payments;
+
+    mpesa_payments.forEach(function (payment) {
+      frappe.call({
+        method: "frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.submit_mpesa_payment",
+        args: {
+          mpesa_payment: payment.payment_id,
+          customer: frm.doc.customer,
+        },
+        callback: function (response) {
+          frappe.msgprint({
+            message: __("Payment processed successfully"),
+            indicator: "green",
+          });
+        },
+      });
+    });
+  }
 });
 
 function check_for_process_payments_button(frm) {
