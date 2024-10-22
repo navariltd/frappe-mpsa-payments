@@ -292,6 +292,8 @@ def get_outstanding_invoices(
 	limit=None,  
 	voucher_no=None,  
 ):
+	if invoice_type is None:
+		invoice_type = "Sales Invoice"
 	
 	account=get_party_account("Customer", customer, company),
 	ple = qb.DocType("Payment Ledger Entry")

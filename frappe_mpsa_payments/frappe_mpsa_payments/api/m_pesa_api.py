@@ -177,5 +177,7 @@ def get_payment_method(pos_profile):
 def get_mode_of_payment(mpesa_doc):
     business_short_code=mpesa_doc.businessshortcode
     mode_of_payment = frappe.get_value("Mpesa C2B Payment Register URL", {"business_shortcode": business_short_code, "register_status": "Success"}, "mode_of_payment")
+    if mode_of_payment is None:
+        mode_of_payment = frappe.get_value("Mpesa C2B Payment Register URL", {"till_number": business_short_code, "register_status": "Success"}, "mode_of_payment")
     return mode_of_payment
     

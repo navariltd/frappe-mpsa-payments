@@ -30,8 +30,7 @@ frappe.ui.form.on("Mpesa Payments", {
       args: {
         company: frm.doc.company,
         currency: frm.doc.currency,
-        // TODO: Figure out why I can't get_party_account for specific customer 
-        customer: "",
+        customer: frm.doc.customer,
       },
       callback: function (response) {
         let draft_invoices = response.message;
@@ -40,10 +39,9 @@ frappe.ui.form.on("Mpesa Payments", {
 
           draft_invoices.forEach(function (invoice) {
             let row = frm.add_child("invoices");
-            row.invoice = invoice.name;
-            row.customer = invoice.customer;
+            row.invoice = invoice.voucher_no;
             row.date = invoice.posting_date;
-            row.total = invoice.grand_total;
+            row.total = invoice.invoice_amount;
             row.outstanding_amount = invoice.outstanding_amount;
           });
 
