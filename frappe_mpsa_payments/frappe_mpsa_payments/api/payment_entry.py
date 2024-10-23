@@ -484,10 +484,7 @@ def get_available_pos_profiles(company, currency):
 	)
 	return pos_profiles_list
 
-def create_and_reconcile_payment_reconciliation(invoice_name, customer, company, payment_entries):
-	invoice = frappe.get_doc("Sales Invoice", invoice_name)
-	currency = invoice.get("currency")
-	
+def create_and_reconcile_payment_reconciliation(outstanding_invoices, customer, company, payment_entries):
 	reconcile_doc = frappe.new_doc("Payment Reconciliation")
 	reconcile_doc.party_type = "Customer"
 	reconcile_doc.party = customer
@@ -500,17 +497,19 @@ def create_and_reconcile_payment_reconciliation(invoice_name, customer, company,
 		"payments": [],
 	}
 
-	args["invoices"].append(
-		{
-			"invoice_type": "Sales Invoice",
-			"invoice_number": invoice.get("name"),
-			"invoice_date": invoice.get("posting_date"),
-			"amount": invoice.get("grand_total"),
-			"outstanding_amount": invoice.get("outstanding_amount"),
-			"currency": invoice.get("currency"),
-			"exchange_rate": 0,
-		}
-	)
+	for invoice in outstanding_invoices:
+		invoice_doc = frappe.get_doc("Sales Invoice", invoice)
+		args["invoices"].append(
+			{
+				"invoice_type": "Sales Invoice",
+				"invoice_number": invoice_doc.get("name"),
+				"invoice_date": invoice_doc.get("posting_date"),
+				"amount": invoice_doc.get("grand_total"),
+				"outstanding_amount": invoice_doc.get("outstanding_amount"),
+				"currency": invoice_doc.get("currency"),
+				"exchange_rate": 0,
+			}
+		)
 	
 	for payment_entry in payment_entries:
 		payment_entry_doc = frappe.get_doc("Payment Entry", payment_entry)
@@ -533,19 +532,21 @@ def create_and_reconcile_payment_reconciliation(invoice_name, customer, company,
 
 @frappe.whitelist()
 def process_mpesa_c2b_reconciliation():
-	mpesa_transaction = frappe.form_dict.get("mpesa_name")
-	invoice_name = frappe.form_dict.get("invoice_name")
-	invoice = frappe.get_doc("Sales Invoice", invoice_name)
-	customer = invoice.get("customer")
-	company = invoice.get("company")
+	mpesa_transactions = frappe.form_dict.get("mpesa_names")
+	invoice_names = frappe.form_dict.get("invoice_names")
 
-	# TODO: after testing, withdraw this static method of payment
-	mode_of_payment = "Mpesa-Test"
+	if not invoice_names:
+		frappe.throw(_("No invoices provided."))
 
-	payment_entry = submit_mpesa_payment(mpesa_transaction, customer)
-	payment_entries = [payment_entry.get("name")]
+	first_invoice_name = invoice_names[0]
+	first_invoice = frappe.get_doc("Sales Invoice", first_invoice_name)
+	customer = first_invoice.get("customer")
+	company = first_invoice.get("company")
 
-	create_and_reconcile_payment_reconciliation(invoice_name, customer, company, payment_entries)
+	payment_entries = [submit_mpesa_payment(mpesa_transaction, customer).get("name") for mpesa_transaction in
+					   mpesa_transactions]
+
+	create_and_reconcile_payment_reconciliation(invoice_names, customer, company, payment_entries)
 
 
 @frappe.whitelist()
