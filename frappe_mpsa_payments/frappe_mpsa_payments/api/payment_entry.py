@@ -1,3 +1,4 @@
+import json
 
 import frappe, erpnext
 from frappe import _
@@ -500,16 +501,17 @@ def create_and_reconcile_payment_reconciliation(outstanding_invoices, customer, 
 	for invoice in outstanding_invoices:
 		invoice_doc = frappe.get_doc("Sales Invoice", invoice)
 		args["invoices"].append(
-			{
-				"invoice_type": "Sales Invoice",
-				"invoice_number": invoice_doc.get("name"),
-				"invoice_date": invoice_doc.get("posting_date"),
-				"amount": invoice_doc.get("grand_total"),
-				"outstanding_amount": invoice_doc.get("outstanding_amount"),
-				"currency": invoice_doc.get("currency"),
-				"exchange_rate": 0,
-			}
-		)
+            {
+                "invoice_type": "Sales Invoice",
+                "invoice_number": invoice_doc.get("name"),
+                "invoice_date": invoice_doc.get("posting_date"),
+                "amount": invoice_doc.get("grand_total"),
+                "outstanding_amount": invoice_doc.get("outstanding_amount"),
+                "currency": invoice_doc.get("currency"),
+                "exchange_rate": 0,
+            }
+        )
+
 	
 	for payment_entry in payment_entries:
 		payment_entry_doc = frappe.get_doc("Payment Entry", payment_entry)
@@ -531,9 +533,11 @@ def create_and_reconcile_payment_reconciliation(outstanding_invoices, customer, 
 	frappe.db.commit()
 
 @frappe.whitelist()
-def process_mpesa_c2b_reconciliation():
-	mpesa_transactions = frappe.form_dict.get("mpesa_names")
-	invoice_names = frappe.form_dict.get("invoice_names")
+def process_mpesa_c2b_reconciliation(mpesa_names, invoice_names):
+	if isinstance(mpesa_names, str):
+		mpesa_names = json.loads(mpesa_names)
+	if isinstance(invoice_names, str):
+		invoice_names = json.loads(invoice_names)
 
 	if not invoice_names:
 		frappe.throw(_("No invoices provided."))
@@ -543,8 +547,8 @@ def process_mpesa_c2b_reconciliation():
 	customer = first_invoice.get("customer")
 	company = first_invoice.get("company")
 
-	payment_entries = [submit_mpesa_payment(mpesa_transaction, customer).get("name") for mpesa_transaction in
-					   mpesa_transactions]
+	payment_entries = [submit_mpesa_payment(mpesa_name, customer).get("name") for mpesa_name in
+					   mpesa_names]
 
 	create_and_reconcile_payment_reconciliation(invoice_names, customer, company, payment_entries)
 

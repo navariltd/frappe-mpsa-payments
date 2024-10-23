@@ -98,9 +98,6 @@ frappe.ui.form.on("Mpesa Payments", {
   },
 
   process_payments(frm, retryCount = 0) {
-    // Maximum retry attempts
-    const MAX_RETRIES = 3;
-    const DELAY_BETWEEN_REQUESTS = 500; // 0.5 second delay between processing each payment
 
     let unpaid_invoices = frm.doc.invoices || [];
     let mpesa_payments = frm.doc.mpesa_payments || [];
@@ -113,88 +110,39 @@ frappe.ui.form.on("Mpesa Payments", {
       });
       return;
     }
+    
+    let invoice_names = unpaid_invoices.map(invoice => invoice.invoice);
+    let mpesa_names = mpesa_payments.map(payment => payment.payment_id);
 
-    // Recursive function to process each invoice one by one
-    const processSingleInvoice = (invoiceIndex = 0) => {
-      if (invoiceIndex >= unpaid_invoices.length) {
-
-        frm.clear_table("invoices");
-        frm.clear_table("mpesa_payments");
-        frm.refresh_field("invoices");
-        frm.refresh_field("mpesa_payments");
-
-        frm.events.fetch_entries(frm);
-
-        return;
-      }
-
-      // Get the current invoice
-      let invoice = unpaid_invoices[invoiceIndex];
-      let invoiceName = invoice.invoice;
-
-      // Process all payments for this invoice
-      mpesa_payments.forEach(function (payment, paymentIndex) {
-        let paymentName = payment.payment_id;
-
-        setTimeout(() => {
-          frappe.call({
-            method: "frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry.process_mpesa_c2b_reconciliation",
-            args: {
-              invoice_name: invoiceName,
-              mpesa_name: paymentName,
-            },
-            callback: function (response) {
-              if (response.message === "success") {
+    frappe.call({
+        method: "frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry.process_mpesa_c2b_reconciliation",
+        args: {
+            invoice_names: invoice_names,
+            mpesa_names: mpesa_names
+        },
+        callback: function (response) {
+            if (response.message === "success") {
                 frappe.msgprint({
-                  title: __("Payment Processed"),
-                  message: __("Invoice {0} and Payment {1} processed successfully.", [invoiceName, paymentName]),
-                  indicator: "green",
+                    title: __("Success"),
+                    message: __("Payment reconciliation successful."),
+                    indicator: "green",
                 });
-              } 
-            //   else {
-            //     frappe.msgprint({
-            //       title: __("Payment Processing Failed"),
-            //       message: __(
-            //         "The payment could not be processed for Invoice {0} and Payment {1}. Please try again.",
-            //         [invoiceName, paymentName]
-            //       ),
-            //       indicator: "red",
-            //     });
-            //   }
-            },
-            error: function (error) {
-              // Handle deadlock errors and retry
-              if (error.message && error.message.includes("Deadlock Occurred") && retryCount < MAX_RETRIES) {
+
+                frm.clear_table("invoices");
+                frm.clear_table("mpesa_payments");
+                frm.refresh_field("invoices");
+                frm.refresh_field("mpesa_payments");
+
+                frm.events.fetch_entries(frm);
+            } else {
                 frappe.msgprint({
-                  title: __("Deadlock Occurred"),
-                  message: __("Retrying..."),
-                  indicator: "orange",
+                    title: __("Payment Processing Failed"),
+                    message: __("Some payments could not be processed. Please try again."),
+                    indicator: "red",
                 });
-                // Retry after delay
-                setTimeout(() => {
-                  processSingleInvoice(invoiceIndex, retryCount + 1);
-                }, DELAY_BETWEEN_REQUESTS);
-              } 
-            //   else {
-            //     frappe.msgprint({
-            //       title: __("Payment Processing Failed"),
-            //       message: __("Unable to process Invoice {0} and Payment {1}. Maximum retry attempts reached.", [invoiceName, paymentName]),
-            //       indicator: "red",
-            //     });
-            //   }
-            },
-          });
-        }, paymentIndex * DELAY_BETWEEN_REQUESTS);
-      });
-
-      // Move to the next invoice after processing all payments for the current invoice
-      setTimeout(() => {
-        processSingleInvoice(invoiceIndex + 1);
-      }, (mpesa_payments.length + 1) * DELAY_BETWEEN_REQUESTS);
-    };
-
-    // Start processing the first invoice
-    processSingleInvoice(0);
+            }
+        }
+    })
   },
 
 });
