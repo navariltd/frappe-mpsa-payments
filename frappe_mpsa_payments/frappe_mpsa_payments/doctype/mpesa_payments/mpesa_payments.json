@@ -15,6 +15,9 @@
   "column_break_pfoh",
   "to_invoice_date",
   "to_mpesa_payment_date",
+  "column_break_asbv",
+  "invoice_name",
+  "full_name",
   "sales_invoices_section",
   "invoices",
   "section_break_lqip",
@@ -51,6 +54,7 @@
   },
   {
    "collapsible": 1,
+   "default": "1",
    "depends_on": "eval: doc.customer",
    "fieldname": "filters_section",
    "fieldtype": "Section Break",
@@ -101,13 +105,28 @@
    "fieldtype": "Table",
    "label": "Mpesa Payments",
    "options": "Mpesa Draft Payments"
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Full Name"
+  },
+  {
+   "fieldname": "column_break_asbv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_name",
+   "fieldtype": "Link",
+   "label": "Invoice Name",
+   "options": "Sales Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_virtual": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-10-17 07:37:53.368911",
+ "modified": "2024-10-24 07:12:51.700054",
  "modified_by": "Administrator",
  "module": "Frappe Mpsa Payments",
  "name": "Mpesa Payments",

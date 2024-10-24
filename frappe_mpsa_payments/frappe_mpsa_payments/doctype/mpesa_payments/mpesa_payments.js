@@ -12,9 +12,25 @@ frappe.ui.form.on("Mpesa Payments", {
 
     frm.set_df_property("invoices", "cannot_add_rows", true);
     frm.set_df_property("mpesa_payments", "cannot_add_rows", true);
+    
+  },
 
+  customer(frm) {
     let fetch_btn = frm.add_custom_button(__("Fetch Entries"), () => {
-      frm.trigger("fetch_entries");
+        frm.trigger("fetch_entries");
+      });
+  },
+
+  onload_post_render(frm) {
+    frm.set_query('invoice_name', function() {
+        return {
+            filters: {
+                docstatus: 1,
+                outstanding_amount: ['>', 0],
+                company: frm.doc.company,
+                customer: frm.doc.customer,
+            }
+        };
     });
   },
 
@@ -30,6 +46,9 @@ frappe.ui.form.on("Mpesa Payments", {
         company: frm.doc.company,
         currency: frm.doc.currency,
         customer: frm.doc.customer,
+        voucher_no: frm.doc.invoice_name || "",
+        from_date: frm.doc.from_invoice_date || "",
+        to_date: frm.doc.to_invoice_date || "",
       },
       callback: function (response) {
         let draft_invoices = response.message;
@@ -66,6 +85,8 @@ frappe.ui.form.on("Mpesa Payments", {
       args: {
         company: frm.doc.company,
         full_name: frm.doc.full_name || "",
+        from_date: frm.doc.from_mpesa_payment_date || "",
+        to_date: frm.doc.to_mpesa_payment_date || "",
       },
       callback: function (response) {
         let draft_payments = response.message;
@@ -121,7 +142,7 @@ frappe.ui.form.on("Mpesa Payments", {
             mpesa_names: mpesa_names
         },
         callback: function (response) {
-            if (response.message === "success") {
+            if (response) {
                 frappe.msgprint({
                     title: __("Success"),
                     message: __("Payment reconciliation successful."),
@@ -133,7 +154,6 @@ frappe.ui.form.on("Mpesa Payments", {
                 frm.refresh_field("invoices");
                 frm.refresh_field("mpesa_payments");
 
-                frm.events.fetch_entries(frm);
             } else {
                 frappe.msgprint({
                     title: __("Payment Processing Failed"),

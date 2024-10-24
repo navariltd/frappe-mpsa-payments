@@ -286,6 +286,8 @@ def get_outstanding_invoices(
 	invoice_type=None,
 	common_filter=None,
 	posting_date=None,
+	from_date=None,
+	to_date=None,
 	min_outstanding=None,
 	max_outstanding=None,
 	accounting_dimensions=None,
@@ -317,6 +319,12 @@ def get_outstanding_invoices(
 	common_filter.append(ple.account.isin(account))
 	common_filter.append(ple.party_type == "Customer")
 	common_filter.append(ple.party == customer)
+	if from_date and to_date:
+		common_filter.append(ple.posting_date.between(from_date, to_date))
+	elif from_date:
+		common_filter.append(ple.posting_date >= from_date)
+	elif to_date:
+		common_filter.append(ple.posting_date <= to_date)
 
 	ple_query = QueryPaymentLedger()
 	invoice_list = ple_query.get_voucher_outstandings(

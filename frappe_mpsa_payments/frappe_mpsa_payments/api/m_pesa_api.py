@@ -67,6 +67,8 @@ def get_mpesa_draft_c2b_payments(
     company,
     full_name=None,
     mode_of_payment=None,
+    from_date=None,
+    to_date=None,
 ):
     fields = [
         "name",
@@ -86,7 +88,14 @@ def get_mpesa_draft_c2b_payments(
         filters["mode_of_payment"] = mode_of_payment
 
     if full_name:
-        filters["full_name"] = full_name
+        filters["full_name"] = ["like", f"%{full_name}%"]
+
+    if from_date and to_date:
+        filters["posting_date"] = ["between", [from_date, to_date]]
+    elif from_date:
+        filters["posting_date"] = [">=", from_date]
+    elif to_date:
+        filters["posting_date"] = ["<=", to_date]
 
     payments = frappe.get_all(
         "Mpesa C2B Payment Register", 
