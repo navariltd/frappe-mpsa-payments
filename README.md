@@ -1,4 +1,4 @@
-## Frappe Mpesa Payments
+## Frappe Mpesa Payment
 
 Frappe Mpesa Payments is a Frappe-based application that integrates with Safaricom's Daraja API, providing tools to manage and reconcile Mpesa payments within Frappe ecosystem. This app is designed for businesses using Mpesa's C2B(Customer-to-Business) and Mpesa Express payment solutions, enabling the easy setup of Mpesa payment settings, URL registration and reconciliation of payments.
 
