@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry import (
+from frappe_mpsa_payments.frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry import (
     get_outstanding_invoices,
     get_unallocated_payments,
     process_pos_payment,
@@ -83,3 +83,98 @@ class TestPaymentFunctions(FrappeTestCase):
 
         self.assertEqual(paid_amount, 100.00)
         self.assertEqual(received_amount, 100.00)
+
+    def test_create_payment_entry(self):
+        company = "Test Company Maniac"
+        customer = "Test Customer"
+        currency = "KES"
+        amount = 100
+        mode_of_payment = "Cash"
+
+       
+        payment_entry = create_payment_entry(
+           company=company,
+           customer=customer,
+           amount=amount,
+           currency=currency,
+           mode_of_payment=mode_of_payment,
+           submit=0
+        )
+
+        self.assertEqual(payment_entry.doctype, "Payment Entry")
+        self.assertEqual(payment_entry.party, customer)
+        self.assertEqual(payment_entry.company, company)
+        self.assertEqual(payment_entry.paid_amount, amount)
+
+    def test_get_mode_of_payment(self):
+
+        pos_profile = frappe.get_doc({
+           "doctype": "POS Profile",
+           "name": "Test POS Profile",
+           "company": "Test Company Maniac",
+           "currency": "KES",
+           "payments": [
+               {"mode_of_payment": "Cash", "default": 1},
+               {"mode_of_payment": "Card", "default": 0}
+          ]
+        }).insert()
+ 
+        mop = get_mode_of_payment(pos_profile.name)
+ 
+        self.assertEqual(mop, "Cash")
+
+    def test_create_and_reconcile_payment_reconciliation(self):
+
+        customer = "Test Customer"
+        company = "Test Company Maniac"
+        currency = "KES"
+
+         
+        invoice = frappe.get_doc({
+           "doctype": "Sales Invoice",
+           "customer": customer,
+           "company": company,
+           "currency": currency,
+           "items": [{"item_code": "Test Item", "qty": 1, "rate": 100}]
+        }).insert()
+        invoice.submit()
+
+          
+        pe = create_payment_entry(
+            company=company,
+            customer=customer,
+            amount=100,
+            currency=currency,
+            mode_of_payment="Cash",
+            submit=1
+        ) 
+
+         
+        create_and_reconcile_payment_reconciliation([invoice.name], customer, company, [pe.name])
+
+        
+        exists = frappe.db.exists("Payment Reconciliation", {"party": customer, "company": company})
+        self.assertTrue(exists)
+
+    def test_get_mode_of_payment(self):
+
+       pos_profile = frappe.get_doc({
+          "doctype": "POS Profile",
+          "name": "Test POS Profile",
+          "company": "Test Company Maniac",
+          "currency": "KES",
+          "payments": [
+             {"mode_of_payment": "Cash", "default": 1},
+             {"mode_of_payment": "Card", "default": 0}
+          ]
+        }).insert()
+
+         mop = get_mode_of_payment(pos_profile.name)
+
+         self.assertEqual(mop, "Cash")
+    
+    
+     
+    
+     
+        
