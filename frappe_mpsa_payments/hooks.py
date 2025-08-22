@@ -154,13 +154,12 @@ doctype_js = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+    "Contact": {
+        "before_save": "frappe_mpsa_payments.utils.utils.auto_hash_contact_phone",
+        "on_update": "frappe_mpsa_payments.utils.utils.auto_hash_contact_phone",
+    }
+}
 
 # Scheduled Tasks
 # ---------------

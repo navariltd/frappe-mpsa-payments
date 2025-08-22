@@ -6,3 +6,4 @@ frappe_mpsa_payments.frappe_mpsa_payments.patches.sales_invoice_patch
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+frappe_mpsa_payments.frappe_mpsa_payments.patches.update_contact_phone_hashes
