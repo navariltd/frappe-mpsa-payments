@@ -263,7 +263,7 @@
   },
   {
    "depends_on": "eval: doc.auto_reconcile_c2b",
-   "description": "Defines the order and fields used to auto-reconcile M-Pesa C2B payments. The system matches payments sequentially based on this table (e.g., Customer by ID \u2192 Customer by PIN \u2192 Sales Invoice by ID) until a successful reconciliation. Works for PayBill transactions referencing an account.",
+   "description": "Defines the order and fields used to auto-reconcile M-Pesa C2B payments. The system matches the paid account reference sequentially against this table (e.g., Customer by ID \u2192 Customer by PIN \u2192 Sales Invoice by ID) and stops at the first hit. Leave empty to use the default order: Sales Invoice, Sales Order, Quotation, then Customer, each matched by ID. Works for PayBill transactions referencing an account.",
    "fieldname": "reconciliation_order",
    "fieldtype": "Table",
    "label": "Reconciliation Priority",

@@ -11,6 +11,24 @@ from frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry import (
     get_outstanding_invoices,
 )
 
+# Used when Mpesa Settings has no Reconciliation Priority rows. Reproduces the
+# order this matching was hardcoded to before the table drove it, so an install
+# that never configured the table keeps behaving the same.
+DEFAULT_RECONCILIATION_ORDER = (
+    ("Sales Invoice", "name"),
+    ("Sales Order", "name"),
+    ("Quotation", "name"),
+    ("Customer", "name"),
+)
+
+# Where a matched document names its customer. Anything not listed is assumed
+# to carry a plain `customer` field.
+CUSTOMER_FIELD_BY_DOCTYPE = {
+    "Customer": "name",
+    "Quotation": "party_name",
+}
+DEFAULT_CUSTOMER_FIELD = "customer"
+
 
 class MpesaC2BPaymentRegister(Document):
     def before_insert(self):
@@ -190,22 +208,93 @@ class MpesaC2BPaymentRegister(Document):
                     f"Failed to cancel Payment Entry {self.payment_entry} for C2B {self.name}",
                 )
 
+    def _reconciliation_order(self) -> list[tuple[str, str]]:
+        """The configured priority for this shortcode.
+
+        Falls back to the historical hardcoded order when the table is empty,
+        so an unconfigured install is unaffected.
+
+        The table only appears in the form while auto_reconcile_c2b is on, so
+        it stays dormant while that is off - otherwise rows left behind by
+        someone who disabled auto reconciliation would quietly keep steering
+        customer resolution, which runs whether or not the toggle is set.
+        """
+        settings = frappe.db.get_value(
+            "Mpesa Settings",
+            {"business_shortcode": self.businessshortcode},
+            ["name", "auto_reconcile_c2b"],
+            as_dict=True,
+        )
+
+        settings_name = (
+            settings.name if settings and settings.auto_reconcile_c2b else None
+        )
+
+        rows = []
+        if settings_name:
+            rows = [
+                (row.target_doctype, row.match_field or "name")
+                for row in frappe.get_all(
+                    "Mpesa Reconciliation Priority",
+                    filters={
+                        "parent": settings_name,
+                        "parenttype": "Mpesa Settings",
+                    },
+                    fields=["target_doctype", "match_field"],
+                    order_by="idx asc",
+                )
+                if row.target_doctype
+            ]
+
+        return rows or list(DEFAULT_RECONCILIATION_ORDER)
+
+    def _match_filters(self, doctype: str, match_field: str) -> dict:
+        filters = {match_field: self.billrefnumber}
+
+        meta = frappe.get_meta(doctype)
+        if meta.is_submittable:
+            filters["docstatus"] = 1
+
+        # A Quotation can be addressed to a Lead, whose party_name is not a
+        # Customer. Only Customer quotations can name one.
+        if doctype == "Quotation" and meta.has_field("quotation_to"):
+            filters["quotation_to"] = "Customer"
+
+        return filters
+
+    def _usable_match(self, doctype: str, match_field: str) -> tuple[str, str] | None:
+        """Guard a configured row against a doctype or field that no longer exists."""
+        if not doctype:
+            return None
+
+        try:
+            meta = frappe.get_meta(doctype)
+        except Exception:
+            # A configured row can outlive the doctype or app it points at.
+            return None
+
+        if match_field != "name" and not meta.has_field(match_field):
+            return None
+
+        customer_field = CUSTOMER_FIELD_BY_DOCTYPE.get(doctype, DEFAULT_CUSTOMER_FIELD)
+        if customer_field != "name" and not meta.has_field(customer_field):
+            return None
+
+        return match_field, customer_field
+
     def _find_customer_from_billref(self, billrefnumber: str) -> str | None:
         if not billrefnumber:
             return
 
-        sources = [
-            ("Sales Invoice", "customer", {"docstatus": 1}),
-            ("Sales Order", "customer", {"docstatus": 1}),
-            ("Quotation", "party_name", {"docstatus": 1, "quotation_to": "Customer"}),
-            ("Customer", "name", {}),
-        ]
+        for doctype, match_field in self._reconciliation_order():
+            usable = self._usable_match(doctype, match_field)
+            if not usable:
+                continue
 
-        for doctype, customer_field, extra_filters in sources:
-            filters = {"name": billrefnumber}
-            filters.update(extra_filters)
-
-            customer = frappe.db.get_value(doctype, filters, customer_field)
+            match_field, customer_field = usable
+            customer = frappe.db.get_value(
+                doctype, self._match_filters(doctype, match_field), customer_field
+            )
             if customer:
                 self.customer = customer
                 return
@@ -239,25 +328,35 @@ class MpesaC2BPaymentRegister(Document):
         """
         Returns a tuple (invoice, sales_order), where exactly one is non-None if billrefnumber matched either.
         Otherwise both are None.
-        """
-        invoice = self._find_matching_invoice()
-        if invoice:
-            return invoice, None
 
-        order = self._find_matching_sales_order()
-        if order:
-            return None, order
+        Walks the configured Reconciliation Priority in order. Rows targeting
+        anything we cannot settle a payment against are skipped here; they still
+        count for customer resolution.
+        """
+        for doctype, match_field in self._reconciliation_order():
+            if not self._usable_match(doctype, match_field):
+                continue
+
+            if doctype == "Sales Invoice":
+                invoice = self._find_matching_invoice(match_field)
+                if invoice:
+                    return invoice, None
+
+            elif doctype == "Sales Order":
+                order = self._find_matching_sales_order(match_field)
+                if order:
+                    return None, order
 
         return None, None
 
-    def _find_matching_invoice(self):
+    def _find_matching_invoice(self, match_field: str = "name"):
         if not self.billrefnumber:
             return None
 
         return frappe.get_value(
             "Sales Invoice",
             {
-                "name": self.billrefnumber,
+                match_field: self.billrefnumber,
                 "docstatus": 1,
                 "company": self.company,
                 "customer": self.customer,
@@ -266,14 +365,14 @@ class MpesaC2BPaymentRegister(Document):
             "name",
         )
 
-    def _find_matching_sales_order(self):
+    def _find_matching_sales_order(self, match_field: str = "name"):
         if not self.billrefnumber:
             return None
 
         return frappe.get_value(
             "Sales Order",
             {
-                "name": self.billrefnumber,
+                match_field: self.billrefnumber,
                 "docstatus": 1,
                 "company": self.company,
                 "customer": self.customer,
