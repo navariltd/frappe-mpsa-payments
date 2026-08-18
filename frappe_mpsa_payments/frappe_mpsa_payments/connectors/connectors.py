@@ -1,21 +1,26 @@
 from __future__ import annotations
 
-from typing import Callable, Literal, Optional, Union
-from urllib import parse
-from frappe.model.document import Document
-
-from datetime import datetime, timedelta
-
-import requests
-from requests.auth import HTTPBasicAuth
-import frappe
-from frappe.integrations.utils import create_request_log
 import base64
+from datetime import datetime, timedelta
+from typing import Callable, Literal, Optional, Union
+
+import frappe
+import requests
+from frappe.integrations.utils import create_request_log
+from frappe.model.document import Document
+from requests.auth import HTTPBasicAuth
+
 
 # Remote error handler for Mpesa
 def on_mpesa_error(data, url, doctype, document_name):
     error_msg = f"Remote error at {url} for {doctype} {document_name}: {data}"
-    frappe.log_error(title="Mpesa Error", message=error_msg, reference_doctype=doctype, reference_name=document_name)
+    frappe.log_error(
+        title="Mpesa Error",
+        message=error_msg,
+        reference_doctype=doctype,
+        reference_name=document_name,
+    )
+
 
 # Custom integration request updater
 def update_integration_request(
@@ -30,10 +35,13 @@ def update_integration_request(
         doc.error = error if doc.error in (None, "null") else (doc.error + "\n" + error)
 
     if output:
-        doc.output = output if doc.output in (None, "null") else (doc.output + "\n" + output)
+        doc.output = (
+            output if doc.output in (None, "null") else (doc.output + "\n" + output)
+        )
 
     doc.status = status
     doc.save(ignore_permissions=True)
+
 
 # Observer for error handling
 class ErrorObserver:
@@ -41,11 +49,21 @@ class ErrorObserver:
         if notifier.error:
             name = getattr(notifier.integration_request, "name", None)
             if name:
-                update_integration_request(name, status="Failed", error=str(notifier.error))
-            frappe.log_error(title="Mpesa Fatal Error", message=str(notifier.error),
-                             reference_doctype=notifier.doctype,
-                             reference_name=notifier.document_name)
-            frappe.throw("A Fatal Error occurred. Check the Error Log.", notifier.error, title="Mpesa Fatal Error")
+                update_integration_request(
+                    name, status="Failed", error=str(notifier.error)
+                )
+            frappe.log_error(
+                title="Mpesa Fatal Error",
+                message=str(notifier.error),
+                reference_doctype=notifier.doctype,
+                reference_name=notifier.document_name,
+            )
+            frappe.throw(
+                "A Fatal Error occurred. Check the Error Log.",
+                notifier.error,
+                title="Mpesa Fatal Error",
+            )
+
 
 # Base builder class
 class BaseMpesaConnector:
@@ -60,8 +78,8 @@ class BaseMpesaConnector:
         for observer in self._observers:
             observer.update(self)
 
+
 class MpesaConnector(BaseMpesaConnector):
-    
     def __init__(self, settings_name: str):
         super().__init__()
         self.settings_name = settings_name
@@ -93,7 +111,11 @@ class MpesaConnector(BaseMpesaConnector):
 
     def _initialize_settings(self):
         settings = self._get_mpesa_settings()
-        self._base_url = "https://sandbox.safaricom.co.ke" if settings["sandbox"] else "https://api.safaricom.co.ke"
+        self._base_url = (
+            "https://sandbox.safaricom.co.ke"
+            if settings["sandbox"]
+            else "https://api.safaricom.co.ke"
+        )
 
     def _is_token_valid(self) -> bool:
         settings = self._get_mpesa_settings()
@@ -104,16 +126,15 @@ class MpesaConnector(BaseMpesaConnector):
     def _update_token(self, token: str, expires_in: int):
         token_expiry = datetime.now() + timedelta(seconds=int(expires_in))
         frappe.db.set_value(
-            "Mpesa Settings", 
-            self.settings_name, 
+            "Mpesa Settings",
+            self.settings_name,
             {
                 "access_token": token,
                 "expires_in": int(expires_in),
-                "token_expiry": token_expiry
-            }
+                "token_expiry": token_expiry,
+            },
         )
         frappe.db.commit()
-
 
     def _set_timeout(self, seconds: int):
         self._timeout = seconds
@@ -126,7 +147,7 @@ class MpesaConnector(BaseMpesaConnector):
             url = f"{self._base_url}/oauth/v1/generate?grant_type=client_credentials"
             auth_string = f"{s['consumer_key']}:{s['consumer_secret']}"
             encoded_auth = base64.b64encode(auth_string.encode()).decode()
-            
+
             self.integration_request = create_request_log(
                 data={"grant_type": "client_credentials"},
                 request_description="Mpesa OAuth Token Authentication",
@@ -137,24 +158,22 @@ class MpesaConnector(BaseMpesaConnector):
                 reference_docname=self.settings_name,
                 reference_doctype="Mpesa Settings",
             )
-            r = requests.get(url, auth=HTTPBasicAuth(s["consumer_key"], s["consumer_secret"]))
+            r = requests.get(
+                url, auth=HTTPBasicAuth(s["consumer_key"], s["consumer_secret"])
+            )
             r.raise_for_status()
             data = r.json()
             self._update_token(data["access_token"], data["expires_in"])
-            
+
             update_integration_request(
-                self.integration_request.name, 
-                status="Completed", 
-                output=str(data)
+                self.integration_request.name, status="Completed", output=str(data)
             )
-            
+
             return data["access_token"]
         except Exception as e:
-            if hasattr(self, 'integration_request') and self.integration_request:
+            if hasattr(self, "integration_request") and self.integration_request:
                 update_integration_request(
-                    self.integration_request.name, 
-                    status="Failed", 
-                    error=str(e)
+                    self.integration_request.name, status="Failed", error=str(e)
                 )
             self.error = e
             self.notify()
@@ -171,9 +190,18 @@ class MpesaConnector(BaseMpesaConnector):
         headers.update(self._custom_headers)
         return headers
 
-    def make_remote_call(self, doctype=None, document_name=None, retrying=False, skip_integration_request=False):
+    def make_remote_call(
+        self,
+        doctype=None,
+        document_name=None,
+        retrying=False,
+        skip_integration_request=False,
+    ):
         if not all([self._endpoint, self._method, self._success_callback]):
-            frappe.throw("Missing required parameters (endpoint, method, callbacks).", frappe.MandatoryError)
+            frappe.throw(
+                "Missing required parameters (endpoint, method, callbacks).",
+                frappe.MandatoryError,
+            )
 
         self._initialize_settings()
         self._url = f"{self._base_url}/{self._endpoint.lstrip('/')}"
@@ -194,7 +222,9 @@ class MpesaConnector(BaseMpesaConnector):
                     limit=1,
                 )
                 if existing_request:
-                    self.integration_request = frappe.get_doc("Integration Request", existing_request[0].name)
+                    self.integration_request = frappe.get_doc(
+                        "Integration Request", existing_request[0].name
+                    )
                 else:
                     self.integration_request = create_request_log(
                         data=self._payload,
@@ -236,10 +266,18 @@ class MpesaConnector(BaseMpesaConnector):
     def _send_request(self) -> requests.Response:
         headers = self._get_authenticated_headers()
         method_map = {
-            "GET": lambda: requests.get(self._url, headers=headers, params=self._payload, timeout=self._timeout),
-            "POST": lambda: requests.post(self._url, json=self._payload, headers=headers, timeout=self._timeout),
-            "PATCH": lambda: requests.patch(self._url, json=self._payload, headers=headers, timeout=self._timeout),
-            "PUT": lambda: requests.put(self._url, json=self._payload, headers=headers, timeout=self._timeout),
+            "GET": lambda: requests.get(
+                self._url, headers=headers, params=self._payload, timeout=self._timeout
+            ),
+            "POST": lambda: requests.post(
+                self._url, json=self._payload, headers=headers, timeout=self._timeout
+            ),
+            "PATCH": lambda: requests.patch(
+                self._url, json=self._payload, headers=headers, timeout=self._timeout
+            ),
+            "PUT": lambda: requests.put(
+                self._url, json=self._payload, headers=headers, timeout=self._timeout
+            ),
         }
 
         if self._method in {"PATCH", "PUT"} and self._payload and "id" in self._payload:
@@ -250,29 +288,70 @@ class MpesaConnector(BaseMpesaConnector):
         return method_map[self._method]()
 
     def _handle_success(self, data):
-        self._success_callback(response=data, payload=self._payload, document_name=self.document_name, doctype=self.doctype, integration_request=self.integration_request, settings_name=self.settings_name)
-        update_integration_request(self.integration_request.name, status="Completed", output=str(data))
+        self._success_callback(
+            response=data,
+            payload=self._payload,
+            document_name=self.document_name,
+            doctype=self.doctype,
+            integration_request=self.integration_request,
+            settings_name=self.settings_name,
+        )
+        update_integration_request(
+            self.integration_request.name, status="Completed", output=str(data)
+        )
 
     def _handle_error(self, data):
-        update_integration_request(self.integration_request.name, status="Failed", error=str(data))
+        update_integration_request(
+            self.integration_request.name, status="Failed", error=str(data)
+        )
         if self._error_callback:
-            self._error_callback(response=data, payload=self._payload, document_name=self.document_name, doctype=self.doctype, integration_request=self.integration_request, settings_name=self.settings_name)
+            self._error_callback(
+                response=data,
+                payload=self._payload,
+                document_name=self.document_name,
+                doctype=self.doctype,
+                integration_request=self.integration_request,
+                settings_name=self.settings_name,
+            )
         else:
-            on_mpesa_error(data, url=self._url, doctype=self.doctype, document_name=self.document_name)
+            on_mpesa_error(
+                data,
+                url=self._url,
+                doctype=self.doctype,
+                document_name=self.document_name,
+            )
 
-    def set_headers(self, headers: dict): self._custom_headers.update(headers); return self
-    def set_endpoint(self, endpoint: str): self._endpoint = endpoint; return self
-    def set_payload(self, payload: dict): self._payload = payload; return self
-    def set_method(self, method): self._method = method; return self
-    def on_success(self, callback: Callable): self._success_callback = callback; return self
-    def on_error(self, callback: Callable): self._error_callback = callback; return self
-    def describe(self, description: str): self._request_description = description; return self
-    
-    def reuse_existing_request(self, flag: bool = True): 
-        self._reuse_existing_integration_request = flag
+    def set_headers(self, headers: dict):
+        self._custom_headers.update(headers)
         return self
 
+    def set_endpoint(self, endpoint: str):
+        self._endpoint = endpoint
+        return self
 
+    def set_payload(self, payload: dict):
+        self._payload = payload
+        return self
+
+    def set_method(self, method):
+        self._method = method
+        return self
+
+    def on_success(self, callback: Callable):
+        self._success_callback = callback
+        return self
+
+    def on_error(self, callback: Callable):
+        self._error_callback = callback
+        return self
+
+    def describe(self, description: str):
+        self._request_description = description
+        return self
+
+    def reuse_existing_request(self, flag: bool = True):
+        self._reuse_existing_integration_request = flag
+        return self
 
 
 def get_response_data(response: requests.Response) -> Optional[Union[dict, str, bytes]]:

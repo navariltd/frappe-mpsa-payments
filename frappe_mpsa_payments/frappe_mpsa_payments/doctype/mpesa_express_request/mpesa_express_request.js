@@ -56,8 +56,8 @@ frappe.ui.form.on("Mpesa Express Request", {
 								} else {
 									frappe.msgprint(
 										__(
-											"Missing ResultDesc or ResponseDescription in response.",
-										),
+											"Missing ResultDesc or ResponseDescription in response."
+										)
 									);
 								}
 							} else {
@@ -66,7 +66,7 @@ frappe.ui.form.on("Mpesa Express Request", {
 						},
 					});
 				},
-				__("Mpesa Actions"),
+				__("Mpesa Actions")
 			);
 
 			frm.add_custom_button(
@@ -88,7 +88,7 @@ frappe.ui.form.on("Mpesa Express Request", {
 							const res = r.message;
 							if (res) {
 								frappe.msgprint({
-									message: msg,
+									message: res.CustomerMessage || __("STK Push initiated."),
 									indicator: "green",
 									title: __("STK Push Initiated"),
 								});
@@ -98,7 +98,7 @@ frappe.ui.form.on("Mpesa Express Request", {
 						},
 					});
 				},
-				__("Mpesa Actions"),
+				__("Mpesa Actions")
 			);
 		}
 
@@ -116,7 +116,7 @@ frappe.ui.form.on("Mpesa Express Request", {
 						},
 					});
 				},
-				__("Mpesa Actions"),
+				__("Mpesa Actions")
 			);
 		}
 	},

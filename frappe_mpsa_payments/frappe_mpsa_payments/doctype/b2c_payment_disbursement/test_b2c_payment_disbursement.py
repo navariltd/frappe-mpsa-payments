@@ -1,10 +1,12 @@
 # Copyright (c) 2024, Navari Limited and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
+
 from .b2c_payment_disbursement import B2CPaymentDisbursement
-from unittest.mock import patch
 
 
 class TestB2CPaymentDisbursement(FrappeTestCase):
@@ -260,11 +262,11 @@ class TestB2CPaymentDisbursement(FrappeTestCase):
         self.payment_disbursement.posting_date = "2024-06-01"
         self.payment_disbursement.source_exchange_rate = 1.0
         self.payment_disbursement.paid_amount = 100
-        
+
         # Patch frappe.get_cached_value
         original_get_cached_value = frappe.get_cached_value
         frappe.get_cached_value = lambda doctype, name, field: "KES"
-        
+
         try:
             self.payment_disbursement.set_missing_values()
             self.assertEqual(self.payment_disbursement.company_currency, "KES")
@@ -272,19 +274,21 @@ class TestB2CPaymentDisbursement(FrappeTestCase):
             frappe.get_cached_value = original_get_cached_value
 
     @patch("frappe.get_cached_value")
-    def test_set_missing_values_does_not_set_company_currency_if_exists(self, mock_get_cached_value):
+    def test_set_missing_values_does_not_set_company_currency_if_exists(
+        self, mock_get_cached_value
+    ):
         """Test that set_missing_values does not overwrite company_currency if it already exists."""
         self.payment_disbursement.company_currency = "USD"
         self.payment_disbursement.paid_from_account_currency = "KES"
         self.payment_disbursement.posting_date = "2024-06-01"
         self.payment_disbursement.source_exchange_rate = 1.0
         self.payment_disbursement.paid_amount = 100
-        
+
         # Mock get_cached_value to return a different currency
         mock_get_cached_value.return_value = "EUR"
-        
+
         self.payment_disbursement.set_missing_values()
-        
+
         # Assert that company_currency is still USD
         self.assertEqual(self.payment_disbursement.company_currency, "USD")
 
@@ -296,29 +300,31 @@ class TestB2CPaymentDisbursement(FrappeTestCase):
         self.payment_disbursement.company_currency = "USD"
         self.payment_disbursement.posting_date = "2024-06-01"
         self.payment_disbursement.paid_amount = 100
-        
+
         # Mock get_cached_value to return a valid exchange rate
         mock_get_cached_value.return_value = 110.0
-        
+
         self.payment_disbursement.set_missing_values()
-        
+
         # Assert that source_exchange_rate is set correctly
         self.assertEqual(self.payment_disbursement.source_exchange_rate, 110.0)
 
     @patch("frappe.get_cached_value")
-    def test_set_missing_values_does_not_set_source_exchange_rate_if_exists(self, mock_get_cached_value):
+    def test_set_missing_values_does_not_set_source_exchange_rate_if_exists(
+        self, mock_get_cached_value
+    ):
         """Test that set_missing_values does not overwrite source_exchange_rate if it already exists."""
         self.payment_disbursement.source_exchange_rate = 1.5
         self.payment_disbursement.paid_from_account_currency = "KES"
         self.payment_disbursement.company_currency = "USD"
         self.payment_disbursement.posting_date = "2024-06-01"
         self.payment_disbursement.paid_amount = 100
-        
+
         # Mock get_cached_value to return a different exchange rate
         mock_get_cached_value.return_value = 2.0
-        
+
         self.payment_disbursement.set_missing_values()
-        
+
         # Assert that source_exchange_rate is still 1.5
         self.assertEqual(self.payment_disbursement.source_exchange_rate, 1.5)
 
@@ -331,21 +337,26 @@ class TestB2CPaymentDisbursement(FrappeTestCase):
             security_credential="Test Credential",
             business_shortcode="123456",
             consumer_key="CKEY",
-            consumer_secret="CSECRET"
+            consumer_secret="CSECRET",
         )
-        
+
         # Mock the get_doc call to return the mock setting
         self.payment_disbursement.mpesa_setting = "Test Gateway"
         mock_get_doc.return_value = mock_setting
 
         result = self.payment_disbursement._get_mpesa_settings()
-        
-        self.assertEqual(result, mock_setting) # Assert that the returned document matches the mock
-        
+
+        self.assertEqual(
+            result, mock_setting
+        )  # Assert that the returned document matches the mock
+
         # Assert that get_doc was called with the correct parameters
         mock_get_doc.assert_called_once_with(
             "Mpesa Settings",
-            {"payment_gateway_name": "Test Gateway", "api_type": "MPesa B2C (Business to Customer)"},
+            {
+                "payment_gateway_name": "Test Gateway",
+                "api_type": "MPesa B2C (Business to Customer)",
+            },
             [
                 "name",
                 "initiator_name",
@@ -359,7 +370,9 @@ class TestB2CPaymentDisbursement(FrappeTestCase):
 
     @patch("frappe.get_doc")
     @patch("frappe.throw")
-    @patch("frappe_mpsa_payments.frappe_mpsa_payments.doctype.b2c_payment_disbursement.b2c_payment_disbursement.app_logger")
+    @patch(
+        "frappe_mpsa_payments.frappe_mpsa_payments.doctype.b2c_payment_disbursement.b2c_payment_disbursement.app_logger"
+    )
     def test_get_mpesa_settings_not_found(self, mock_logger, mock_throw, mock_get_doc):
         """Test that _get_mpesa_settings throws and logs error if settings not found."""
         self.payment_disbursement.mpesa_setting = "Missing Gateway"

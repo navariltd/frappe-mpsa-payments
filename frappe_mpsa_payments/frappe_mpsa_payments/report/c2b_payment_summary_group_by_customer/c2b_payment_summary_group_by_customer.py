@@ -3,8 +3,6 @@
 
 import frappe
 from frappe.query_builder import DocType
-from pypika.terms import Criterion
-from pypika.functions import Sum, Count, Max
 
 
 def execute(filters=None):
@@ -166,7 +164,9 @@ def get_data(filters):
             data.extend(customer_payments)
             data.append(
                 create_subtotal_row(
-                    current_customer, customer_payments[0]["customer_name"], customer_total_amount
+                    current_customer,
+                    customer_payments[0]["customer_name"],
+                    customer_total_amount,
                 )
             )
             data.append({})  # Add an empty row for separation
@@ -185,7 +185,9 @@ def get_data(filters):
         data.extend(customer_payments)
         data.append(
             create_subtotal_row(
-                current_customer, customer_payments[0]["customer_name"], customer_total_amount
+                current_customer,
+                customer_payments[0]["customer_name"],
+                customer_total_amount,
             )
         )
         data.append({})

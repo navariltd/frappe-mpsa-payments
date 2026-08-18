@@ -1,10 +1,9 @@
-import frappe
 import base64
 import os
+
+import frappe
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from datetime import datetime
 
 
 def load_certificate_path(cert_url: str, sandbox: bool) -> str:
@@ -38,7 +37,6 @@ def generate_security_credential(
     following M-Pesa's security credential generation requirements.
     """
     try:
-
         full_path = load_certificate_path(certificate_path, sandbox)
 
         with open(full_path, "rb") as cert_file:

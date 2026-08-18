@@ -4,7 +4,6 @@
 import frappe
 from frappe.query_builder import DocType
 from frappe.query_builder.functions import Coalesce
-from pypika.terms import Criterion
 
 
 def execute(filters=None):

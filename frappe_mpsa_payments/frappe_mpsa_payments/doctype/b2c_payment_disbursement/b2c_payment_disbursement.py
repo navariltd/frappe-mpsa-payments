@@ -496,7 +496,6 @@ class B2CPaymentDisbursement(Document):
         from erpnext.accounts.doctype.payment_entry.payment_entry import (
             get_outstanding_reference_documents as original_get_outstanding_reference_documents,
         )
-
         from erpnext.accounts.party import get_party_account
 
         party_type = args.get("party_type")

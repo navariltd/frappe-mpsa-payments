@@ -170,7 +170,10 @@ def log_and_throw_error(err_msg, context=None):
 def handle_successful_transaction(request_doc, settings):
     """Handle actions for a successful transaction"""
 
-    if request_doc.reference_doctype == "Payment Entry" and not request_doc.transaction_id:
+    if (
+        request_doc.reference_doctype == "Payment Entry"
+        and not request_doc.transaction_id
+    ):
         return
 
     if request_doc.get("reference_doctype") and request_doc.get("reference_name"):

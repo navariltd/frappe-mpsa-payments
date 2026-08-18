@@ -1,7 +1,6 @@
 import frappe
 from frappe import _
 from frappe.utils import now
-import json
 
 
 def get_context(context):
@@ -99,7 +98,7 @@ def check_payment_status(name):
     redirect_to = doc.redirect_to
     if doc.reference_doctype == "Payment Entry" and not doc.is_reconciled:
         redirect_to = None
-    
+
     return {
         "status": doc.status,
         "docstatus": doc.docstatus,

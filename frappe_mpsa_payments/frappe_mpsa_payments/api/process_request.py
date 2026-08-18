@@ -1,5 +1,7 @@
-from typing import Optional, Union, Callable, Literal
+from typing import Callable, Literal, Optional, Union
+
 from ..connectors.connectors import MpesaConnector
+
 
 def process_request(
     endpoint: str,
@@ -52,4 +54,6 @@ def process_request(
         builder.on_error(error_callback)
 
     # Make the remote API call
-    return builder.make_remote_call(doctype=doctype, document_name=document_name, retrying=retrying)
+    return builder.make_remote_call(
+        doctype=doctype, document_name=document_name, retrying=retrying
+    )

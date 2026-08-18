@@ -3,8 +3,11 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from .b2c_payment_disbursement_reference import sanitise_phone_number
-from .b2c_payment_disbursement_reference import is_valid_receiver_contact
+
+from .b2c_payment_disbursement_reference import (
+    is_valid_receiver_contact,
+    sanitise_phone_number,
+)
 
 
 class TestB2CPaymentDisbursementReference(FrappeTestCase):
