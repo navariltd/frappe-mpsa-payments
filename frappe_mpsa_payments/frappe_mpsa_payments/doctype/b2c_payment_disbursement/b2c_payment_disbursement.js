@@ -3,11 +3,10 @@
 
 const HAS_ERPNEXT = frappe.boot?.app_data?.some((app) => app.app_name === "erpnext");
 
-if (!HAS_ERPNEXT) {
-	return;
-}
-
-frappe.ui.form.on("B2C Payment Disbursement", {
+// Frappe runs doctype scripts through `new Function(...)`, so a bare top-level
+// return works at runtime - but the file is linted as a module, where it is a
+// syntax error. Hold the handlers and register them behind the guard instead.
+const B2C_HANDLERS = {
 	onload: function (frm) {
 		frm.ignore_doctypes_on_cancel_all = [
 			"Employee Advance",
@@ -516,7 +515,7 @@ frappe.ui.form.on("B2C Payment Disbursement", {
 			},
 		]);
 
-		btn_text = "Get Outstanding References";
+		const btn_text = "Get Outstanding References";
 
 		frappe.prompt(
 			fields,
@@ -595,7 +594,6 @@ frappe.ui.form.on("B2C Payment Disbursement", {
 			to_posting_date: filters.to_posting_date,
 			from_due_date: filters.from_due_date,
 			to_due_date: filters.to_due_date,
-			outstanding_amt_greater_than: filters.outstanding_amt_greater_than,
 			outstanding_amt_greater_than: filters.outstanding_amt_greater_than,
 		};
 
@@ -689,7 +687,11 @@ frappe.ui.form.on("B2C Payment Disbursement", {
 			},
 		});
 	},
-});
+};
+
+if (HAS_ERPNEXT) {
+	frappe.ui.form.on("B2C Payment Disbursement", B2C_HANDLERS);
+}
 
 function generateUUIDv4() {
 	// Generates a uuid4 string conforming to RFC standards
