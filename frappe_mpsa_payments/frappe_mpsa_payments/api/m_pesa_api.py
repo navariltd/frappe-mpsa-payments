@@ -296,7 +296,21 @@ def initiate_stk_push(**args) -> any:
         amount = args.request_amount
         business_shortcode = mpesa_settings.business_shortcode
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        reference_name = args.get("reference_name", "Online Payment")
+        # AccountReference is the Pay Bill account number: the string the payment
+        # shows against on the customer's statement, and what comes back as
+        # BillRefNumber for reconciliation. Prefer the caller's own reference - a
+        # POS sets one before the invoice exists - then the linked document.
+        #
+        # Every caller sends these keys even when their value is None, and
+        # dict.get() only falls back when a key is *absent*, so each step has to
+        # be an `or`. Sending a null here is what Daraja rejects with
+        # 400.002.02 "Bad Request - Invalid Remarks".
+        account_reference = (
+            args.get("account_reference")
+            or args.get("reference_name")
+            or args.get("document_name")
+            or "Online Payment"
+        )
 
         payload = {
             "BusinessShortCode": business_shortcode,
@@ -311,8 +325,8 @@ def initiate_stk_push(**args) -> any:
             ),
             "PhoneNumber": int(mobile_number),
             "CallBackURL": callback_url,
-            "AccountReference": reference_name,
-            "TransactionDesc": reference_name,
+            "AccountReference": account_reference,
+            "TransactionDesc": account_reference,
             "TransactionType": (
                 "CustomerPayBillOnline"
                 if mpesa_settings.paybill_type == "Pay Bill"

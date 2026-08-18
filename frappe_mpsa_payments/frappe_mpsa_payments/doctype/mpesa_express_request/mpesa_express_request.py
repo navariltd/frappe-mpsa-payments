@@ -112,6 +112,7 @@ class MpesaExpressRequest(Document):
             "doctype": self.doctype,
             "document_name": self.name,
             "reference_name": self.reference_name,
+            "account_reference": self.account_reference,
         }
 
         try:
