@@ -12,9 +12,10 @@ def create_payment_entry_mpesa_fields():
                 "fieldname": "custom_mpesa_section",
                 "label": "M-Pesa STK Push",
                 "fieldtype": "Section Break",
-                "insert_after": "mode_of_payment",
+                "insert_after": "cost_center",
                 "depends_on": "eval:doc.payment_type=='Receive' && doc.party_type=='Customer'",
                 "module": "Frappe Mpsa Payments",
+                "collapsible": 1,
             },
             {
                 "fieldname": "custom_payment_gateway_account",

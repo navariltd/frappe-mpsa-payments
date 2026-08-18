@@ -8,4 +8,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 # frappe_mpsa_payments.frappe_mpsa_payments.patches.mpesa_custom_fields
 frappe_mpsa_payments.frappe_mpsa_payments.patches.c2b_payment_register
-frappe_mpsa_payments.frappe_mpsa_payments.patches.payment_entry_custom_fields
+frappe_mpsa_payments.frappe_mpsa_payments.patches.payment_entry_custom_fields # v16: mpesa-section update
