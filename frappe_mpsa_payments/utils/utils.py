@@ -392,7 +392,7 @@ def get_mode_of_payment_account(mode_of_payment: str, company: str) -> str:
     )
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def convert_amount_to_kes(
     currency: str, amount: float, date: str = None, settings: str = None
 ) -> float | None:

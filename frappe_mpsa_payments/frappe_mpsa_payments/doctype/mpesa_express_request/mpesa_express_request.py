@@ -5,6 +5,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe_mpsa_payments.utils.doctype_names import MPESA_SETTINGS_DOCTYPE
+from frappe.rate_limiter import rate_limit
 from frappe.utils import time
 from frappe.exceptions import DoesNotExistError
 from ....utils.utils import (
@@ -166,7 +167,12 @@ class MpesaExpressRequest(Document):
             handle_successful_transaction(self, settings)
 
 
+# Left reachable without logging in so an external site can raise a payment
+# request. That means an unauthenticated caller can make this shortcode send a
+# prompt to a number of their choosing, so it is rate limited per IP. Requiring
+# authentication here would be the stronger control if no such caller exists.
 @frappe.whitelist(allow_guest=True)
+@rate_limit(limit=10, seconds=60)
 def create_new_request(
     phone_number,
     payment_gateway,
@@ -216,7 +222,7 @@ def clean_digits(v):
     return "".join(filter(str.isdigit, str(v)))
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_request_status(name):
     frappe.flags.ignore_permissions = True
 
@@ -244,7 +250,7 @@ def get_request_status(name):
     }
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_stkpush_defaults():
     gateways = frappe.get_all(
         "Payment Gateway",
@@ -269,7 +275,7 @@ def get_stkpush_defaults():
     return {"gateways": gateways, "reference_map": reference_map}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def retry_stkpush(name):
     doc = frappe.get_doc("Mpesa Express Request", name)
     if doc.status == "Completed":

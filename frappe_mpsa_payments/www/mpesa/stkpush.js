@@ -39,7 +39,7 @@ async function submit_payment() {
 		await frappe.call({
 			method: "frappe_mpsa_payments.www.mpesa.stkpush.initiate_stk_push",
 			args: {
-				name: id,
+				request_id: id,
 				phone_number: phone,
 			},
 		});
@@ -57,7 +57,10 @@ async function retry_stk() {
 	try {
 		await frappe.call({
 			method: "frappe_mpsa_payments.www.mpesa.stkpush.retry_stkpush",
-			args: { name: id, phone_number: document.getElementById("phone_number")?.value },
+			args: {
+				request_id: id,
+				phone_number: document.getElementById("phone_number")?.value,
+			},
 		});
 		location.reload(true);
 	} catch (e) {
@@ -72,7 +75,7 @@ async function checkPaymentStatus() {
 	try {
 		const response = await frappe.call({
 			method: "frappe_mpsa_payments.www.mpesa.stkpush.check_payment_status",
-			args: { name: id },
+			args: { request_id: id },
 		});
 
 		const data = response.message;
