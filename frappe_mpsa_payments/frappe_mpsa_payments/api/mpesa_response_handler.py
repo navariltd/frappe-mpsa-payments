@@ -141,11 +141,16 @@ PULL_NO_RECORDS_HINT = (
 BULK_PULL_FLAG = "mpesa_bulk_pull"
 BULK_PULL_RESULTS_FLAG = "mpesa_bulk_pull_results"
 
+# Set only when sweeping many shortcodes at once (hourly job, bulk pull action).
+# In that mode a per-shortcode 1001 is noise: most branches simply took no
+# payments in the window, and the run writes one summary listing all of them.
+BULK_PULL_BATCH_FLAG = "mpesa_bulk_pull_batch"
+
 
 def publish_pull_result(message: dict) -> None:
     """Emit one toast per pull - unless a bulk run is collecting them.
 
-    A bulk pull over 69 shortcodes would otherwise fire 69 separate popups. The
+    A bulk pull over many shortcodes would otherwise fire one popup each. The
     bulk worker sets the flag, runs everything in its own job, and publishes a
     single summary at the end.
     """
@@ -239,10 +244,13 @@ def pull_transaction_on_success(response: dict, document_name: str, **kwargs) ->
             log_message.append("")
             log_message.append(PULL_NO_RECORDS_HINT)
 
-        frappe.log_error(
-            title=f"Mpesa Pull Transaction: {response_code} from Safaricom",
-            message="\n".join(log_message),
-        )
+        # In a batch sweep the summary covers this; logging each shortcode
+        # separately produced ~800 near-identical entries a day.
+        if not frappe.flags.get(BULK_PULL_BATCH_FLAG):
+            frappe.log_error(
+                title=f"Mpesa Pull Transaction: {response_code} from Safaricom",
+                message="\n".join(log_message),
+            )
 
         record_pull_outcome(
             settings.name,
@@ -273,25 +281,21 @@ def pull_transaction_on_success(response: dict, document_name: str, **kwargs) ->
 
     created, skipped, failed = 0, 0, 0
     created_records = []
+    duplicate_transids = []
+    malformed = []
 
     for txn in transactions:
         try:
             transid = txn.get("transactionId", "")
             if not transid:
-                frappe.log_error(
-                    title="Mpesa Pull Transaction: Missing TransactionID",
-                    message=f"Transaction payload missing transactionId: {txn}",
-                )
+                malformed.append(str(txn))
                 skipped += 1
                 continue
 
             if frappe.db.exists(
                 MPESA_C2B_PAYMENT_REGISTER_DOCTYPE, {"transid": transid}
             ):
-                frappe.log_error(
-                    title="Mpesa Pull Transaction: Duplicate Skipped",
-                    message=f"transid={transid} already exists in {MPESA_C2B_PAYMENT_REGISTER_DOCTYPE}",
-                )
+                duplicate_transids.append(transid)
                 skipped += 1
                 continue
 
@@ -325,10 +329,31 @@ def pull_transaction_on_success(response: dict, document_name: str, **kwargs) ->
 
     frappe.db.commit()
 
-    if created_records:
+    # One log per pull, not one per transaction. A busy shortcode re-pulls
+    # dozens of transactions the webhook already delivered, and logging each
+    # duplicate separately buried everything else.
+    if created_records or duplicate_transids or malformed:
+        summary = [
+            f"Settings: {settings.name}",
+            f"ShortCode: {shortcode!r}",
+            f"Window: {kwargs.get('payload', {})}",
+            f"Returned by Safaricom: {len(transactions)}",
+            f"Created: {created}   Skipped: {skipped}   Failed: {failed}",
+        ]
+        if created_records:
+            summary += ["", "Created:", frappe.as_json(created_records)]
+        if duplicate_transids:
+            summary += [
+                "",
+                f"Already present, skipped ({len(duplicate_transids)}):",
+                ", ".join(duplicate_transids),
+            ]
+        if malformed:
+            summary += ["", "Missing transactionId:"] + malformed
+
         frappe.log_error(
-            title="Mpesa Pull Transaction: Records Created",
-            message=frappe.as_json(created_records),
+            title=f"Mpesa Pull Transaction: {settings.name} - {created} created, {skipped} skipped",
+            message="\n".join(summary),
         )
 
     record_pull_outcome(

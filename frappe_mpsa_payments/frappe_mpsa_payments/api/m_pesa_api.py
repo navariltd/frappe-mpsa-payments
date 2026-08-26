@@ -23,6 +23,7 @@ from ...utils.utils import (
     update_mpesa_request_status,
 )
 from .mpesa_response_handler import (
+    BULK_PULL_BATCH_FLAG,
     BULK_PULL_FLAG,
     BULK_PULL_RESULTS_FLAG,
     balance_query_on_success,
@@ -1080,8 +1081,8 @@ PULL_MAX_PAGES = 50
 def execute_pull_transactions(mpesa_settings: str, payload: dict) -> None:
     """Pull every page Safaricom has for the window, not just the first one.
 
-    Safaricom paginates: a 48h window on a busy shortcode came back as
-    TotalRecords 318 across TotalPages 4. We used to send OffSetValue once and
+    Safaricom paginates: a 48h window on a busy shortcode can come back as
+    several hundred records across several pages. We used to send OffSetValue once and
     import whatever single page came back, silently dropping the rest unless
     someone manually re-ran with offset 1, 2, 3. Now we walk the pages.
 
@@ -1282,6 +1283,7 @@ def execute_bulk_pull_transactions(
     toasts can be suppressed via BULK_PULL_FLAG and replaced by a single message.
     """
     frappe.flags[BULK_PULL_FLAG] = True
+    frappe.flags[BULK_PULL_BATCH_FLAG] = True
     frappe.flags[BULK_PULL_RESULTS_FLAG] = []
 
     skipped_settings = []
@@ -1306,6 +1308,7 @@ def execute_bulk_pull_transactions(
         results = frappe.flags.get(BULK_PULL_RESULTS_FLAG) or []
     finally:
         frappe.flags[BULK_PULL_FLAG] = False
+        frappe.flags[BULK_PULL_BATCH_FLAG] = False
 
     imported = sum(r.get("created") or 0 for r in results)
     no_data = [r for r in results if r.get("response_code") == "1001"]
