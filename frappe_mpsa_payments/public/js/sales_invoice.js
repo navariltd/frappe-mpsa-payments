@@ -204,50 +204,59 @@ frappe.ui.form.on("Sales Invoice Payment", {
 	},
 });
 
+const STK_PUSH_BUTTON_HTML =
+	'<button class="btn btn-primary btn-xs stk-button">Initiate STK Push</button>';
+
+function is_stk_push_row(row) {
+	const is_mpesa_or_phone =
+		(row.mode_of_payment && row.mode_of_payment.toLowerCase().includes("mpesa")) ||
+		row.type === "Phone";
+
+	return Boolean(is_mpesa_or_phone && row.phone_number && row.amount > 0 && !row.reference_no);
+}
+
 function setup_stk_push_button_logic(frm) {
 	if (frm.is_new()) return;
 
-	const payments = frm.doc.payments || [];
+	const grid = frm.fields_dict.payments?.grid;
+	if (!grid || !grid.docfields.some((df) => df.fieldname === "initiate_stk_push")) return;
+
+	// renders the button inside an expanded grid row, where the static cell is hidden
+	grid.update_docfield_property("initiate_stk_push", "options", STK_PUSH_BUTTON_HTML);
+
 	const was_dirty = frm.doc.__unsaved;
 
-	payments.forEach((row) => {
-		const is_mpesa_or_phone =
-			(row.mode_of_payment && row.mode_of_payment.toLowerCase().includes("mpesa")) ||
-			row.type === "Phone";
-
-		if (is_mpesa_or_phone && row.phone_number && row.amount > 0 && !row.reference_no) {
-			row.initiate_stk_push = `
-        <div style="margin-top:5px;">
-          <button class="btn btn-primary btn-xs stk-button" data-row-name="${row.name}">
-            Initiate STK Push
-          </button>
-        </div>
-      `;
-		} else {
-			row.initiate_stk_push = "";
-		}
-
-		if (frm.fields_dict.payments?.grid) {
-			const grid_row = frm.fields_dict.payments.grid.grid_rows_by_docname[row.name];
-			if (grid_row) {
-				grid_row.doc.initiate_stk_push = row.initiate_stk_push;
-				grid_row.refresh_field("initiate_stk_push");
-			}
-		}
+	(frm.doc.payments || []).forEach((row) => {
+		row.initiate_stk_push = is_stk_push_row(row) ? STK_PUSH_BUTTON_HTML : "";
+		grid.grid_rows_by_docname[row.name]?.refresh_field("initiate_stk_push");
 	});
 
 	frm.doc.__unsaved = was_dirty;
 
-	setTimeout(() => {
-		$(frm.fields_dict.payments.wrapper)
-			.find(".stk-button")
-			.off("click")
-			.on("click", function () {
-				const row_name = $(this).data("row-name");
-				const row = frm.doc.payments.find((r) => r.name === row_name);
-				if (row) initiate_stk_push_child(frm, row);
-			});
-	}, 100);
+	bind_stk_push_click(frm, grid);
+}
+
+function bind_stk_push_click(frm, grid) {
+	const wrapper = grid.wrapper[0];
+	if (wrapper.dataset.stkPushBound) return;
+	wrapper.dataset.stkPushBound = "1";
+
+	// delegated, so the handler survives the grid re-rendering its cells; captured, so the
+	// cell listener that reopens the row for editing never sees the click
+	wrapper.addEventListener(
+		"click",
+		(event) => {
+			const button = event.target.closest(".stk-button");
+			if (!button) return;
+
+			event.preventDefault();
+			event.stopPropagation();
+
+			const grid_row = grid.grid_rows.find((row) => row.wrapper?.[0].contains(button));
+			if (grid_row) initiate_stk_push_child(frm, grid_row.doc);
+		},
+		true
+	);
 }
 
 function initiate_stk_push_child(frm, row) {
@@ -258,6 +267,11 @@ function initiate_stk_push_child(frm, row) {
 
 	if (!row.phone_number) {
 		frappe.msgprint(__("Please enter a phone number to initiate STK Push."));
+		return;
+	}
+
+	if (frm.is_dirty()) {
+		frappe.msgprint(__("Save the invoice before initiating STK Push for this payment row."));
 		return;
 	}
 
