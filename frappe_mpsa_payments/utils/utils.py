@@ -124,10 +124,27 @@ def create_payment_gateway_account(gateway, payment_channel="Email", company=Non
         )
         return
 
+    # ERPNext names a Payment Gateway Account "<gateway> - <currency> - <abbr>"
+    # in autoname and fetches its currency from the payment account first,
+    # overriding anything passed in. An account with no currency raises a
+    # TypeError there, so give one the company's currency, as ERPNext's own
+    # validation would have.
+    currency = frappe.db.get_value(
+        "Account", bank_account.name, "account_currency"
+    ) or frappe.db.get_value("Company", company, "default_currency")
+    if not currency:
+        frappe.msgprint(
+            _("Payment Gateway Account not created, please create one manually.")
+        )
+        return
+
+    if not frappe.db.get_value("Account", bank_account.name, "account_currency"):
+        frappe.db.set_value("Account", bank_account.name, "account_currency", currency)
+
     # if payment gateway account exists, return
     if frappe.db.exists(
         "Payment Gateway Account",
-        {"payment_gateway": gateway, "currency": bank_account.account_currency},
+        {"payment_gateway": gateway, "currency": currency},
     ):
         return
 
@@ -138,7 +155,11 @@ def create_payment_gateway_account(gateway, payment_channel="Email", company=Non
                 "is_default": 1,
                 "payment_gateway": gateway,
                 "payment_account": bank_account.name,
-                "currency": bank_account.account_currency,
+                "currency": currency,
+                # Without it the account falls to the site's default company:
+                # named and filed under the wrong company, or unnamed on a site
+                # that has no default company at all.
+                "company": company,
                 "payment_channel": payment_channel,
             }
         ).insert(ignore_permissions=True, ignore_if_duplicate=True)

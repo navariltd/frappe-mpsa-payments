@@ -66,7 +66,22 @@ class MpesaC2BPaymentRegister(Document):
                 return
 
             self.db_set("submit_payment", 1)
-            self.submit()
+
+            # Submit a fresh copy, not self. insert() is still running and calls
+            # the post-save methods for self once after_insert returns; a nested
+            # self.submit() left self marked as a submit, so on_submit and every
+            # submit hook ran a second time for each payment.
+            submitted = frappe.get_doc(self.doctype, self.name)
+            for flag in ("ignore_permissions", "ignore_links", "ignore_mandatory"):
+                submitted.flags[flag] = self.flags.get(flag)
+            submitted.submit()
+
+            # The copy sent its own Save and Submit alerts. Record them on self,
+            # or the outer insert's on_update sends every Save alert again.
+            self.flags.notifications_executed.extend(
+                submitted.flags.notifications_executed or []
+            )
+            self.reload()
 
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), f"C2B Auto-submit Error: {str(e)}")
@@ -280,6 +295,14 @@ class MpesaC2BPaymentRegister(Document):
         )
 
     def _create_sales_invoice_from_order(self, sales_order):
+        # Submitting an invoice writes before it can fail: ERPNext marks the
+        # order billed and moves stock before it posts the GL. The failure is
+        # swallowed so the payment still reaches the books, and without the
+        # savepoint those earlier writes were committed with it - a submitted
+        # invoice with stock moved and nothing in the ledger.
+        savepoint = "c2b_auto_sales_invoice"
+        frappe.db.savepoint(savepoint)
+
         try:
             from erpnext.selling.doctype.sales_order.sales_order import (
                 make_sales_invoice,
@@ -290,14 +313,18 @@ class MpesaC2BPaymentRegister(Document):
             si.insert(ignore_permissions=True)
             si.submit()
 
-            return si.name
-
         except Exception:
+            # Undo first, then log. On MariaDB the Error Log table is MyISAM and
+            # survives the rollback either way; on Postgres it would not.
+            frappe.db.rollback(save_point=savepoint)
             frappe.log_error(
                 frappe.get_traceback(),
                 f"Sales Invoice Creation Failed for SO {sales_order}",
             )
             return None
+
+        frappe.db.release_savepoint(savepoint)
+        return si.name
 
     def _reconcile_against_invoice(self, invoice_list):
         if isinstance(invoice_list, str):

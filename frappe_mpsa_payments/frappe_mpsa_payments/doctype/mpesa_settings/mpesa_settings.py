@@ -431,6 +431,12 @@ def create_mode_of_payment(
 
         return mode_of_payment
 
+    if not mode_of_payment:
+        # No gateway account to attach it to, usually because there was no
+        # company to create one in. Looking it up anyway raised "Mode of
+        # Payment None not found" and failed the whole settings save.
+        return None
+
     return frappe.get_doc("Mode of Payment", mode_of_payment)
 
 
