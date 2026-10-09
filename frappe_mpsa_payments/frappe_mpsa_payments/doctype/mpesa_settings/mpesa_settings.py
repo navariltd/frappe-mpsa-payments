@@ -7,8 +7,6 @@ import re
 import time
 from json import dumps, loads
 from typing import Any
-from urllib.parse import urlparse
-
 import frappe
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -437,20 +435,14 @@ def create_mode_of_payment(
 @frappe.whitelist()
 def trigger_transaction_status(mpesa_settings, transaction_id, remarks="OK"):
     try:
-        site_address = get_request_site_address(True)
-        parsed_url = urlparse(site_address)
-        site_url = f"{parsed_url.scheme}://{parsed_url.hostname}"
-
-        queue_timeout_url = (
-            site_url
-            + "/api/method/frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.handle_queue_timeout"
-        )
-        result_url = (
-            site_url
-            + "/api/method/frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.handle_transaction_status_result"
-        )
-
         settings = frappe.get_doc("Mpesa Settings", mpesa_settings)
+        from frappe_mpsa_payments.frappe_mpsa_payments.api.callback_security import (
+            build_callback_urls,
+        )
+
+        callback_urls = build_callback_urls(settings.name)
+        queue_timeout_url = callback_urls["queue_timeout"]
+        result_url = callback_urls["result"]
 
         integration_request = frappe.get_doc(
             {

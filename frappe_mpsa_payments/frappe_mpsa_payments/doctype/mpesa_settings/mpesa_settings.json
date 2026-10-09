@@ -58,7 +58,10 @@
   "column_break_bcac",
   "expires_in",
   "column_break_ppbt",
-  "token_expiry"
+  "token_expiry",
+  "callback_security_section",
+  "callback_token",
+  "callback_token_updated_on"
  ],
  "fields": [
   {
@@ -368,7 +371,15 @@
    "fieldtype": "Small Text",
    "label": "Last Pull Message",
    "read_only": 1
-  }
+  },
+  {
+   "fieldname": "callback_security_section",
+   "fieldtype": "Section Break",
+   "label": "Daraja Callback Security",
+   "description": "A callback token is generated internally when callback URLs are registered."
+  },
+  {"fieldname":"callback_token","fieldtype":"Password","label":"Callback Token","hidden":1},
+  {"fieldname":"callback_token_updated_on","fieldtype":"Datetime","label":"Token Updated On","read_only":1}
  ],
  "links": [],
  "modified": "2026-07-06 10:15:00.000000",

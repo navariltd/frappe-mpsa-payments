@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch
 
 from frappe.tests.utils import FrappeTestCase
 
+from .callback_security import build_callback_urls, generate_callback_token
 from .m_pesa_api import (
     confirmation,
     get_mpesa_draft_c2b_payments,
@@ -28,6 +29,14 @@ class TestMPesaAPI(FrappeTestCase):
         self.assertEqual(token, "dummy_token")
 
     def test_confirmation(self):
+        from ..doctype.mpesa_settings.test_mpesa_settings import create_mpesa_settings
+
+        settings = create_mpesa_settings("_Callback API Test")
+        generate_callback_token(settings.name)
+        callback_url = build_callback_urls(settings.name)["confirmation"]
+        from urllib.parse import parse_qs, urlparse
+
+        credentials = {key: value[0] for key, value in parse_qs(urlparse(callback_url).query).items()}
         # Test accepted case
         args = {
             "TransactionType": "Payment",
@@ -43,14 +52,22 @@ class TestMPesaAPI(FrappeTestCase):
             "FirstName": "John",
             "MiddleName": "Doe",
             "LastName": "Smith",
+            **credentials,
         }
         result = confirmation(**args)
         self.assertEqual(result["ResultCode"], 0)
         self.assertEqual(result["ResultDesc"], "Accepted")
 
     def test_validation(self):
-        # Test validation always returns accepted
-        result = validation()
+        from ..doctype.mpesa_settings.test_mpesa_settings import create_mpesa_settings
+
+        settings = create_mpesa_settings("_Callback Validation Test")
+        generate_callback_token(settings.name)
+        callback_url = build_callback_urls(settings.name)["validation"]
+        from urllib.parse import parse_qs, urlparse
+
+        credentials = {key: value[0] for key, value in parse_qs(urlparse(callback_url).query).items()}
+        result = validation(**credentials)
         self.assertEqual(result["ResultCode"], 0)
         self.assertEqual(result["ResultDesc"], "Accepted")
 

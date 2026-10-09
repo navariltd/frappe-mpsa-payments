@@ -10,7 +10,7 @@ from frappe.model.document import Document
 from frappe.utils import get_request_site_address, get_url
 
 from frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api import get_token
-
+from frappe_mpsa_payments.frappe_mpsa_payments.api.callback_security import build_callback_urls
 
 class MpesaC2BPaymentRegisterURL(Document):
     """Handle M-Pesa C2B URL registration with automatic API version fallback."""
@@ -53,19 +53,10 @@ class MpesaC2BPaymentRegisterURL(Document):
         )
 
     def _build_callback_urls(self) -> tuple[str, str]:
-        try:
-            site_url = get_request_site_address(True)
-        except RuntimeError:
-            site_url = get_url()
+        from frappe_mpsa_payments.frappe_mpsa_payments.api.callback_security import build_callback_urls
 
-        base_path = (
-            "/api/method/frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api"
-        )
-
-        validation_url = f"{site_url}{base_path}.validation"
-        confirmation_url = f"{site_url}{base_path}.confirmation"
-
-        return validation_url, confirmation_url
+        urls = build_callback_urls(self.mpesa_settings)
+        return urls["validation"], urls["confirmation"]
 
     def _build_registration_payload(self, mpesa_settings: Document) -> dict:
         validation_url, confirmation_url = self._build_callback_urls()

@@ -35,10 +35,12 @@ from .mpesa_response_handler import (
     transaction_status_on_success,
 )
 from .process_request import process_request
+from .callback_security import get_callback_settings, verify_callback_token
 
 
 @frappe.whitelist(allow_guest=True)
 def balance_query_callback(**kwargs) -> None:
+  
     import json
 
     args = frappe._dict(kwargs)
@@ -186,12 +188,7 @@ def get_account_balance(name: str) -> Any:
 
         endpoint = "/mpesa/accountbalance/v1/query"
 
-        callback_url = build_callback_url(
-            "frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.balance_query_callback"
-        )
-        timeout_url = build_callback_url(
-            "frappe_mpsa_payments.frappe_mpsa_payments.api.m_pesa_api.handle_queue_timeout"
-        )
+     
 
         payload = {
             "Initiator": settings.initiator_name,
@@ -491,6 +488,19 @@ def get_token(app_key, app_secret, base_url):
 
 @frappe.whitelist(allow_guest=True)
 def confirmation(**kwargs):
+    verify_callback_token(kwargs.get("token"), kwargs.get("s"))
+    settings = get_callback_settings(kwargs.get("s"))
+    expected_shortcode = (
+        settings.business_shortcode if not settings.sandbox else settings.till_number
+    )
+    received_shortcode = kwargs.get("BusinessShortCode")
+    if (
+        not isinstance(expected_shortcode, str)
+        or not isinstance(received_shortcode, str)
+        or not expected_shortcode.strip()
+        or received_shortcode.strip() != expected_shortcode.strip()
+    ):
+        frappe.throw(_("Forbidden"), frappe.PermissionError)
     try:
         args = frappe._dict(kwargs)
 
@@ -531,6 +541,7 @@ def confirmation(**kwargs):
 
 @frappe.whitelist(allow_guest=True)
 def validation(**kwargs):
+    verify_callback_token(kwargs.get("token"), kwargs.get("s"))
     context = {"ResultCode": 0, "ResultDesc": "Accepted"}
     return dict(context)
 
@@ -723,8 +734,9 @@ def get_mode_of_payment(mpesa_doc):
 
 
 @frappe.whitelist(allow_guest=True)
-def handle_transaction_status_result():
+def handle_transaction_status_result(**kwargs):
     """Handle the transaction status response from Mpesa"""
+    verify_callback_token(kwargs.get("token"), kwargs.get("s"))
     try:
         response = frappe.request.data
         response_data = json.loads(response)
@@ -922,8 +934,9 @@ def process_mpesa_integration_request(integration_request, response_data):
 
 
 @frappe.whitelist(allow_guest=True)
-def handle_queue_timeout():
+def handle_queue_timeout(**kwargs):
     """Handle the timeout response from Mpesa."""
+   
     try:
         response = frappe.request.data
         response_data = json.loads(response)
