@@ -129,6 +129,7 @@ def create_payment_entry(
 
     pe.setup_party_account_field()
     pe.set_missing_values()
+    pe.set_exchange_rate()
     pe.set_amounts()
 
     if references:
