@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
 
 from frappe_mpsa_payments.frappe_mpsa_payments.api.payment_entry import (
     create_and_reconcile_payment_reconciliation,
@@ -110,22 +111,27 @@ class MpesaC2BPaymentRegister(Document):
             invoice, order = self._get_matching_refs()
 
             if invoice:
-                refs.append(
-                    {
-                        "reference_doctype": "Sales Invoice",
-                        "reference_name": invoice,
-                        "allocated_amount": self.transamount,
-                    }
-                )
-
+                ref_doctype, ref_name = "Sales Invoice", invoice
             elif order:
-                refs.append(
-                    {
-                        "reference_doctype": "Sales Order",
-                        "reference_name": order,
-                        "allocated_amount": self.transamount,
-                    }
-                )
+                ref_doctype, ref_name = "Sales Order", order
+            else:
+                ref_doctype = ref_name = None
+
+            if ref_name:
+                # Allocate only up to what is outstanding on the reference; any
+                # overpayment stays as unallocated amount on the Payment Entry
+                # (customer advance / credit on the party account).
+                outstanding = self._get_reference_outstanding(ref_doctype, ref_name)
+                allocated_amount = min(flt(self.transamount), outstanding)
+
+                if allocated_amount > 0:
+                    refs.append(
+                        {
+                            "reference_doctype": ref_doctype,
+                            "reference_name": ref_name,
+                            "allocated_amount": allocated_amount,
+                        }
+                    )
 
             payment_entry = create_payment_entry(
                 self.company,
@@ -249,6 +255,23 @@ class MpesaC2BPaymentRegister(Document):
             return None, order
 
         return None, None
+
+    def _get_reference_outstanding(self, doctype, name):
+        """Outstanding amount on a Sales Invoice / Sales Order, mirroring how
+        ERPNext computes it when validating Payment Entry references."""
+        if doctype == "Sales Invoice":
+            outstanding = frappe.db.get_value(doctype, name, "outstanding_amount")
+        else:
+            so = frappe.db.get_value(
+                doctype,
+                name,
+                ["rounded_total", "grand_total", "advance_paid"],
+                as_dict=True,
+            )
+            outstanding = flt(so.rounded_total or so.grand_total) - flt(so.advance_paid)
+
+        precision = frappe.get_precision("Payment Entry Reference", "allocated_amount")
+        return max(flt(outstanding, precision), 0)
 
     def _find_matching_invoice(self):
         if not self.billrefnumber:
